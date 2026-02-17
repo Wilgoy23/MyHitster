@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Mystery Music Player</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link rel="stylesheet" href="css/shared.css" />
+    <link rel="stylesheet" href="css/index.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Mystery Music</h1>
+      <p id="status-message">Connect with Spotify to play</p>
+
+      <div class="compatibility-notice" id="mobile-notice">
+        <p>
+          <strong>Mobile Device Detected:</strong> For the best experience,
+          please tap "Activate Player" before playing music.
+        </p>
+      </div>
+
+      <div id="login-section">
+        <button id="login-button" class="button-spotify">
+          Connect with Spotify
+        </button>
+      </div>
+
+      <div id="player-section" style="display: none">
+        <button id="activate-button">Activate Player</button>
+
+        <button id="play-button">
+          <div class="play-icon"></div>
+        </button>
+
+        <div id="player-wrapper">
+          <div class="player-bar">
+            <span class="mystery-text">Now Playing Mystery Track</span>
+          </div>
+          <div id="mystery-id"></div>
+        </div>
+
+        <button id="scan-button">Scan QR Code</button>
+
+        <div id="account-section">
+          <p id="user-info">Signed in with Spotify</p>
+          <button id="logout-button">Switch Account</button>
+        </div>
+      </div>
+
+      <div id="loading-section" style="display: none">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Scanner overlay -->
+    <div id="scanner-container">
+      <div id="video-container">
+        <video id="qr-video" playsinline></video>
+        <div id="scan-overlay"></div>
+      </div>
+      <p id="scanner-status">Position QR code in the frame</p>
+      <button id="close-scanner">Cancel</button>
+    </div>
+
+    <footer>
+      <a href="https://wilgoy23.github.io/MyHitster1/">MyHitster</a> | Music
+      Guessing Game
+    </footer>
+
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="js/spotify-auth.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/scanner.js"></script>
+    <script>
+      // Define this IMMEDIATELY, before window.onload
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        console.log("Spotify SDK ready");
+        if (accessToken) {
+          createPlayer();
+        }
+      };
+
+      window.onload = function () {
+        checkMobileDevice();
+        initScanner();
+
+        // Read track from URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const encodedTrack = params.get("track");
+        trackId =
+          params.get("id") || Math.floor(Math.random() * 1000000).toString(16);
+
+        if (encodedTrack) {
+          try {
+            spotifyTrackUri = atob(
+              encodedTrack.replace(/-/g, "+").replace(/_/g, "/"),
+            );
+          } catch (e) {
+            showError("Error decoding track information");
+          }
+        }
+
+        // Handle force-login flag
+        if (localStorage.getItem("force_login") === "true") {
+          localStorage.removeItem("force_login");
+          clearToken();
+          document.getElementById("login-section").style.display = "block";
+          return;
+        }
+
+        // Restore session if token is still valid
+        accessToken = getValidToken();
+        if (accessToken) {
+          const name = localStorage.getItem("spotify_user_name");
+          if (name)
+            document.getElementById("user-info").textContent =
+              `Signed in as ${name}`;
+          document.getElementById("account-section").style.display = "block";
+
+          // SDK might already be loaded, so call createPlayer if it is
+          if (window.Spotify) {
+            createPlayer();
+          }
+          // Otherwise onSpotifyWebPlaybackSDKReady will call it
+        } else {
+          document.getElementById("login-section").style.display = "block";
+        }
+
+        // Event listeners
+        document
+          .getElementById("login-button")
+          .addEventListener("click", initiateLogin);
+        document
+          .getElementById("play-button")
+          .addEventListener("click", handlePlayPause);
+        document
+          .getElementById("logout-button")
+          .addEventListener("click", () => {
+            logoutUser(player, () => {
+              document.getElementById("player-section").style.display = "none";
+              document.getElementById("login-section").style.display = "block";
+              document.getElementById("status-message").textContent =
+                "Connect with Spotify to play";
+            });
+          });
+        document
+          .getElementById("activate-button")
+          .addEventListener("click", activatePlayerForMobile);
+        document
+          .getElementById("scan-button")
+          .addEventListener("click", startScanner);
+        document
+          .getElementById("close-scanner")
+          .addEventListener("click", stopScanner);
+      };
+    </script>
+  </body>
+</html>

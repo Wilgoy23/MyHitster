@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Complete</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/shared.css">
+    <style>
+        .container { max-width: 500px; margin: 0 auto; padding: 40px 20px; }
+        .button-container { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Connecting to Spotify</h1>
+        <div class="spinner" id="spinner"></div>
+        <p id="status">Completing authentication...</p>
+
+        <div class="button-container" id="button-container" style="display: none;">
+            <a href="#" id="continue-button" class="button">Continue to App</a>
+            <a href="#" id="switch-account-button" class="button button-alt">Switch Spotify Account</a>
+        </div>
+    </div>
+
+    <script src="js/spotify-auth.js"></script>
+    <script>
+        window.onload = async function () {
+            const params      = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = params.get('access_token');
+            const expiresIn   = params.get('expires_in');
+            const error       = params.get('error');
+
+            const spinner   = document.getElementById('spinner');
+            const status    = document.getElementById('status');
+            const btnContainer = document.getElementById('button-container');
+
+            if (error) {
+                status.innerHTML = `<div class="error">Authentication error: ${error}</div>`;
+                spinner.style.display = 'none';
+                return;
+            }
+
+            if (!accessToken) {
+                status.innerHTML = '<div class="error">No access token received</div>';
+                spinner.style.display = 'none';
+                btnContainer.style.display = 'block';
+                document.getElementById('continue-button').textContent = 'Try Again';
+                document.getElementById('continue-button').href        = 'index.html';
+                document.getElementById('switch-account-button').style.display = 'none';
+                return;
+            }
+
+            // Store token
+            storeToken(accessToken, expiresIn);
+            status.textContent    = 'Authentication successful!';
+            spinner.style.display = 'none';
+
+            // Fetch username
+            const redirectUri = localStorage.getItem('original_url') || '/';
+            const profile     = await fetchUserProfile(accessToken);
+            if (profile?.display_name) {
+                status.innerHTML = `Connected as <strong>${profile.display_name}</strong>`;
+            }
+
+            // Show buttons
+            btnContainer.style.display = 'block';
+            document.getElementById('continue-button').href = redirectUri;
+            document.getElementById('switch-account-button').addEventListener('click', () => {
+                logoutUser(null, () => {
+                    localStorage.setItem('force_login', 'true');
+                    window.location.href = localStorage.getItem('original_url') || 'index.html';
+                });
+            });
+        };
+    </script>
+</body>
+</html>

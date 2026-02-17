@@ -1,10 +1,11 @@
 /**
  * spotify-auth.js
  * Shared Spotify OAuth helpers: login, token management, logout, user profile.
+ * Uses PKCE (Proof Key for Code Exchange) for secure authorization.
  */
 
 const CLIENT_ID   = '657c1306a4c345328542c2b883db38c3';
-const REDIRECT_URI = 'https://wilgoy23.github.io/MyHitster/callback.html';
+const REDIRECT_URI = 'https://wilgoy23.github.io/MyHitster1/callback.html';
 
 /**
  * Returns the stored access token if it exists and hasn't expired.
@@ -36,14 +37,49 @@ function clearToken() {
     localStorage.removeItem('spotify_access_token');
     localStorage.removeItem('spotify_token_expiration');
     localStorage.removeItem('spotify_user_name');
+    localStorage.removeItem('spotify_code_verifier');
 }
 
 /**
- * Redirects to Spotify's authorization page.
+ * Generates a random string for PKCE code verifier.
+ */
+function generateCodeVerifier() {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return base64URLEncode(array);
+}
+
+/**
+ * Creates a code challenge from the verifier.
+ */
+async function generateCodeChallenge(verifier) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return base64URLEncode(new Uint8Array(hash));
+}
+
+/**
+ * Base64 URL encoding (without padding).
+ */
+function base64URLEncode(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+
+/**
+ * Redirects to Spotify's authorization page using PKCE flow.
  * Stores the current URL so we can return after auth.
  */
-function initiateLogin() {
-    console.log('Initiating Spotify login');
+async function initiateLogin() {
+    console.log('Initiating Spotify login with PKCE');
     localStorage.setItem('original_url', window.location.href);
     clearToken();
 
@@ -55,12 +91,21 @@ function initiateLogin() {
         'user-modify-playback-state',
     ].join(' ');
 
+    // Generate PKCE codes
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    
+    // Store verifier for later use in callback
+    localStorage.setItem('spotify_code_verifier', codeVerifier);
+
     const authUrl =
         'https://accounts.spotify.com/authorize' +
-        '?client_id='     + CLIENT_ID +
-        '&response_type=token' +
-        '&redirect_uri='  + encodeURIComponent(REDIRECT_URI) +
-        '&scope='         + encodeURIComponent(scopes) +
+        '?client_id='            + CLIENT_ID +
+        '&response_type=code' +
+        '&redirect_uri='         + encodeURIComponent(REDIRECT_URI) +
+        '&scope='                + encodeURIComponent(scopes) +
+        '&code_challenge_method=S256' +
+        '&code_challenge='       + codeChallenge +
         '&show_dialog=true';
 
     window.location.href = authUrl;

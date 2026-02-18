@@ -1,14 +1,14 @@
-/**
- * scanner.js
- * Manages QR code scanning via the device camera using jsQR.
- * Depends on: player.js (for spotifyTrackUri, trackId, handlePlayPause)
+/*
+ scanner.js
+ Manages QR code scanning via the device camera using jsQR.
+ Depends on: player.js (for spotifyTrackUri, trackId, handlePlayPause)
  */
 
 let scannerActive   = false;
 let scannerLastCode = null;
 let scannerCooldown = false;
 
-/** Checks camera support and hides the scan button if unavailable. */
+/* Checks camera support and hides the scan button if unavailable. */
 function initScanner() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const scanButton = document.getElementById('scan-button');
@@ -16,7 +16,7 @@ function initScanner() {
     }
 }
 
-/** Opens the scanner overlay and starts the camera feed. */
+/* Opens the scanner overlay and starts the camera feed. */
 function startScanner() {
     const container = document.getElementById('scanner-container');
     if (!container) return;
@@ -54,7 +54,7 @@ function startScanner() {
     });
 }
 
-/** Stops the camera and hides the scanner overlay. */
+/* Stops the camera and hides the scanner overlay. */
 function stopScanner() {
     scannerActive = false;
 
@@ -68,7 +68,7 @@ function stopScanner() {
     }
 }
 
-/** Reads a video frame and passes it to jsQR for detection. */
+/* Reads a video frame and passes it to jsQR for detection. */
 function scanTick() {
     if (!scannerActive) return;
 
@@ -112,11 +112,11 @@ function scanTick() {
     if (scannerActive) requestAnimationFrame(scanTick);
 }
 
-/**
- * Parses a scanned URL and extracts the Spotify track URI.
- * Supports our encoded format (?track=...) and direct Spotify URLs/URIs.
- * @param {string} url
- */
+/*
+ Parses a scanned URL and extracts the Spotify track URI.
+ Supports our encoded format (?track=...) and direct Spotify URLs/URIs.
+ @param {string} url
+*/
 function processScannedUrl(url) {
     try {
         const status = document.getElementById('scanner-status');

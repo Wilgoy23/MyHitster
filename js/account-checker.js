@@ -1,8 +1,8 @@
-/**
- * account-checker.js
- * Logic for the Spotify Account Checker debug page.
- * Depends on: spotify-auth.js
- */
+/*
+ account-checker.js
+ Logic for the Spotify Account Checker debug page.
+ Depends on: spotify-auth.js
+*/
 
 // DOM references
 const loginButton    = document.getElementById('loginButton');
@@ -256,10 +256,10 @@ async function checkAccountStatus() {
     }
 }
 
-/**
- * Tests whether the Spotify Web Playback SDK initialises successfully.
- * Returns { success, device_id?, error?, accountError? }.
- */
+/*
+ Tests whether the Spotify Web Playback SDK initialises successfully.
+ Returns { success, device_id?, error?, accountError? }.
+*/
 function testPlaybackSDK() {
     return new Promise(resolve => {
         const timeout = setTimeout(() => {

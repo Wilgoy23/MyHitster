@@ -1,4 +1,4 @@
-/**
+/*
  * spotify-auth.js
  * Shared Spotify OAuth helpers: login, token management, logout, user profile.
  * Uses PKCE (Proof Key for Code Exchange) for secure authorization.
@@ -7,7 +7,7 @@
 const CLIENT_ID   = '657c1306a4c345328542c2b883db38c3';
 const REDIRECT_URI = 'https://wilgoy23.github.io/MyHitster/callback.html';
 
-/**
+/*
  * Returns the stored access token if it exists and hasn't expired.
  * @returns {string|null}
  */
@@ -20,7 +20,7 @@ function getValidToken() {
     return null;
 }
 
-/**
+/*
  * Saves the access token and its expiry time to localStorage.
  * @param {string} token
  * @param {string|number} expiresIn  seconds until expiry
@@ -30,7 +30,7 @@ function storeToken(token, expiresIn) {
     localStorage.setItem('spotify_token_expiration', Date.now() + parseInt(expiresIn) * 1000);
 }
 
-/**
+/*
  * Clears all Spotify-related data from localStorage.
  */
 function clearToken() {
@@ -40,7 +40,7 @@ function clearToken() {
     localStorage.removeItem('spotify_code_verifier');
 }
 
-/**
+/*
  * Generates a random string for PKCE code verifier.
  */
 function generateCodeVerifier() {
@@ -49,7 +49,7 @@ function generateCodeVerifier() {
     return base64URLEncode(array);
 }
 
-/**
+/*
  * Creates a code challenge from the verifier.
  */
 async function generateCodeChallenge(verifier) {
@@ -59,7 +59,7 @@ async function generateCodeChallenge(verifier) {
     return base64URLEncode(new Uint8Array(hash));
 }
 
-/**
+/*
  * Base64 URL encoding (without padding).
  */
 function base64URLEncode(buffer) {
@@ -74,7 +74,7 @@ function base64URLEncode(buffer) {
         .replace(/=/g, '');
 }
 
-/**
+/*
  * Redirects to Spotify's authorization page using PKCE flow.
  * Stores the current URL so we can return after auth.
  */
@@ -111,7 +111,7 @@ async function initiateLogin() {
     window.location.href = authUrl;
 }
 
-/**
+/*
  * Fetches the current user's Spotify profile and stores their display name.
  * Optionally updates a DOM element with the user's name.
  * @param {string} token
@@ -145,7 +145,7 @@ async function fetchUserProfile(token, displayElementId = null) {
     }
 }
 
-/**
+/*
  * Logs the user out: clears tokens, disconnects the player if provided,
  * opens a Spotify logout popup, then resets the UI.
  * @param {object|null} player  Spotify Web Playback SDK player instance

@@ -1,8 +1,8 @@
-/**
- * player.js
- * Manages the Spotify Web Playback SDK: init, play/pause, premium check.
- * Depends on: spotify-auth.js
- */
+/*
+ player.js
+ Manages the Spotify Web Playback SDK: init, play/pause, premium check.
+ Depends on: spotify-auth.js
+*/
 
 let player          = null;
 let deviceId        = null;
@@ -13,7 +13,7 @@ let isMobileDevice  = false;
 let spotifyTrackUri = null;
 let trackId         = null;
 
-/** Detects mobile and shows the activation notice if needed. */
+/* Detects mobile and shows the activation notice if needed. */
 function checkMobileDevice() {
     isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -22,10 +22,10 @@ function checkMobileDevice() {
     }
 }
 
-/**
- * Starts SDK initialisation flow.
- * Waits for the SDK script to fire onSpotifyWebPlaybackSDKReady if not ready yet.
- */
+/*
+ Starts SDK initialisation flow.
+ Waits for the SDK script to fire onSpotifyWebPlaybackSDKReady if not ready yet.
+*/
 function initializePlayer() {
     document.getElementById('login-section').style.display    = 'none';
     document.getElementById('loading-section').style.display  = 'block';
@@ -35,7 +35,7 @@ function initializePlayer() {
     createPlayer();
 }
 
-/** Creates and connects the Spotify.Player instance. */
+/* Creates and connects the Spotify.Player instance. */
 function createPlayer() {
     if (!accessToken) {
         showError('Authentication token missing');
@@ -111,7 +111,7 @@ function createPlayer() {
     });
 }
 
-/** Activates the player for mobile browsers (required for autoplay). */
+/* Activates the player for mobile browsers (required for autoplay). */
 function activatePlayerForMobile() {
     if (!player) return;
 
@@ -130,7 +130,7 @@ function activatePlayerForMobile() {
         .catch(error => showError('Could not activate player: ' + error.message));
 }
 
-/** Handles the play/pause button click. */
+/* Handles the play/pause button click. */
 function handlePlayPause() {
     if (!player || !deviceId) {
         showError('Player not initialized');
@@ -191,7 +191,7 @@ function handlePlayPause() {
     }
 }
 
-/** Toggles the play/pause button icon. */
+/* Toggles the play/pause button icon. */
 function updatePlayButton() {
     const button = document.getElementById('play-button');
     button.innerHTML = isPlaying
@@ -199,10 +199,10 @@ function updatePlayButton() {
         : '<div class="play-icon"></div>';
 }
 
-/**
- * Fetches the user profile and checks whether the account is Spotify Premium.
- * Updates the status message accordingly.
- */
+/*
+ Fetches the user profile and checks whether the account is Spotify Premium.
+ Updates the status message accordingly.
+*/
 function checkPremiumStatus() {
     if (!accessToken) return;
 
@@ -238,7 +238,7 @@ function checkPremiumStatus() {
     .catch(error => showError('Could not verify account type: ' + error));
 }
 
-/** Displays an error message in the status area. */
+/* Displays an error message in the status area. */
 function showError(message) {
     console.error('Error:', message);
     document.getElementById('status-message').innerHTML =

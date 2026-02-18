@@ -25,7 +25,7 @@
     <script src="js/spotify-auth.js"></script>
     <script>
         window.onload = async function () {
-            // PKCE uses query params, not hash
+            // PKCE
             const params = new URLSearchParams(window.location.search);
             const code   = params.get('code');
             const error  = params.get('error');
@@ -85,7 +85,7 @@
 
                 // Store token
                 storeToken(accessToken, expiresIn);
-                localStorage.removeItem('spotify_code_verifier'); // Clean up
+                localStorage.removeItem('spotify_code_verifier'); 
                 
                 status.textContent = 'Authentication successful!';
                 spinner.style.display = 'none';

@@ -5,7 +5,9 @@
  */
 
 const CLIENT_ID   = '657c1306a4c345328542c2b883db38c3';
-const REDIRECT_URI = 'https://wilgoy23.github.io/MyHitster/callback.html';
+const REDIRECT_URI = window.location.hostname === 'localhost'
+    ? `${window.location.protocol}//${window.location.host}/callback.html`
+    : 'https://wilgoy23.github.io/MyHitster/callback.html';
 
 /*
  * Returns the stored access token if it exists and hasn't expired.

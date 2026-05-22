@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Hitster Card Generator</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/shared.css" />
+    <link rel="stylesheet" href="css/card-generator.css" />
+  </head>
+  <body>
+    <div class="container">
+      <a class="back-link" href="index.html">&#8592; Back to player</a>
+      <h1>Card Generator</h1>
+      <p>Generate a printable PDF deck from any Spotify playlist.</p>
+
+      <!-- ── Auth ── -->
+      <div id="login-section" style="display: none">
+        <p>Sign in with Spotify to fetch your playlist tracks.</p>
+        <button id="login-button" class="button-spotify">Connect with Spotify</button>
+      </div>
+
+      <div id="generator-section" style="display: none">
+        <div id="user-bar">
+          <span id="user-name">Signed in with Spotify</span>
+        </div>
+
+        <!-- ── Step 1: Playlist ── -->
+        <div class="panel">
+          <h2>1 &mdash; Paste a Spotify playlist URL</h2>
+          <div class="input-row">
+            <input
+              type="text"
+              id="playlist-url"
+              placeholder="https://open.spotify.com/playlist/…"
+            />
+            <button class="btn" id="fetch-btn">Fetch tracks</button>
+          </div>
+          <p id="status-message" class="status"></p>
+        </div>
+
+        <!-- ── Step 2: Year range filter ── -->
+        <div class="panel">
+          <h2>2 &mdash; Year range (optional)</h2>
+          <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+            Tracks outside this range are highlighted in yellow so you can
+            review and correct their year before generating.
+          </p>
+          <div class="options-row">
+            <div class="option-group">
+              <label for="min-year">Min year</label>
+              <input type="number" id="min-year" placeholder="e.g. 1960" min="1900" max="2100" />
+            </div>
+            <div class="option-group">
+              <label for="max-year">Max year</label>
+              <input type="number" id="max-year" placeholder="e.g. 2000" min="1900" max="2100" />
+            </div>
+            <button class="btn btn-secondary" id="year-filter-apply">Apply filter</button>
+          </div>
+        </div>
+
+        <!-- ── Step 3: MusicBrainz verification ── -->
+        <div class="panel">
+          <h2>3 &mdash; Verify release dates (optional)</h2>
+          <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+            Cross-checks suspicious dates (remastered classics, post-2020 releases)
+            against MusicBrainz. Rate-limited to one request per second.
+          </p>
+          <div class="mb-row">
+            <div class="option-group">
+              <label for="mb-limit">Max lookups</label>
+              <input type="number" id="mb-limit" value="25" min="1" max="200" />
+            </div>
+            <button class="btn btn-secondary" id="verify-btn">Verify dates</button>
+          </div>
+        </div>
+
+        <!-- ── Loading indicator ── -->
+        <div id="loading-section">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p id="loading-message">Loading…</p>
+          </div>
+        </div>
+
+        <!-- ── Track list ── -->
+        <div id="track-list-section">
+          <div class="panel">
+            <h2>Track list</h2>
+            <p style="font-size:12px;color:#666;margin:0 0 10px">
+              Yellow rows are outside the year range. Edit any year directly in
+              the table before generating.
+            </p>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Artist</th>
+                    <th>Title</th>
+                    <th>Year</th>
+                  </tr>
+                </thead>
+                <tbody id="track-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── Step 4: Generate ── -->
+          <div class="panel">
+            <h2>4 &mdash; Generate PDF</h2>
+            <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+              Produces a double-sided print layout: QR codes on the front,
+              artist &amp; year on the back. Print with <strong>"Flip on short
+              edge"</strong> for proper alignment.
+            </p>
+            <button class="btn btn-green" id="generate-btn">Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <a href="https://wilgoy23.github.io/MyHitster/">MyHitster</a> | Card Generator
+    </footer>
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Shared auth helpers -->
+    <script src="js/spotify-auth.js"></script>
+    <!-- Card generator logic -->
+    <script src="js/card-generator.js"></script>
+  </body>
+</html>

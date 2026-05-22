@@ -1,0 +1,283 @@
+/* =====================
+   Layout overrides
+   ===================== */
+.container {
+    max-width: 860px;
+}
+
+/* =====================
+   Auth header bar
+   ===================== */
+#user-bar {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 24px;
+    text-align: right;
+}
+
+/* =====================
+   Section panels
+   ===================== */
+.panel {
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.panel h2 {
+    color: #e74c3c;
+    font-size: 16px;
+    margin: 0 0 14px;
+}
+
+/* =====================
+   Playlist input row
+   ===================== */
+.input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.input-row input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+}
+
+.input-row input[type="text"]:focus {
+    border-color: #e74c3c;
+}
+
+/* =====================
+   Options row
+   ===================== */
+.options-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-top: 12px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.option-group label {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.option-group input[type="number"],
+.option-group input[type="text"] {
+    width: 90px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    padding: 7px 10px;
+    outline: none;
+}
+
+.option-group input:focus {
+    border-color: #e74c3c;
+}
+
+/* =====================
+   Buttons (local variants)
+   ===================== */
+.btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background-color: #c0392b;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+.btn-green {
+    background-color: #1DB954;
+}
+
+.btn-green:hover {
+    background-color: #17a349;
+}
+
+/* =====================
+   Status messages
+   ===================== */
+.status {
+    margin: 10px 0;
+    font-size: 13px;
+    min-height: 18px;
+}
+
+.success-msg { color: #1DB954; }
+.warning-msg { color: #f39c12; }
+.error       { color: #e74c3c; }
+
+/* =====================
+   Loading
+   ===================== */
+#loading-section {
+    display: none;
+    margin: 16px 0;
+    text-align: center;
+}
+
+#loading-message {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 8px;
+}
+
+/* =====================
+   MusicBrainz panel extras
+   ===================== */
+.mb-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+/* =====================
+   Track list table
+   ===================== */
+#track-list-section {
+    display: none;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: 1px solid #333;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+thead th {
+    background-color: #2a2a2a;
+    color: #aaa;
+    font-weight: normal;
+    padding: 8px 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+tbody tr {
+    border-top: 1px solid #2a2a2a;
+    transition: background 0.15s;
+}
+
+tbody tr:hover {
+    background-color: #1a1a1a;
+}
+
+tbody tr.out-of-range {
+    background-color: rgba(243, 156, 18, 0.1);
+}
+
+tbody tr.out-of-range:hover {
+    background-color: rgba(243, 156, 18, 0.17);
+}
+
+tbody td {
+    padding: 7px 10px;
+    color: #ddd;
+    vertical-align: middle;
+}
+
+tbody td:first-child {
+    color: #666;
+    width: 36px;
+}
+
+.year-input {
+    width: 56px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: white;
+    font-size: 13px;
+    padding: 4px 6px;
+    text-align: center;
+}
+
+.year-input:focus {
+    outline: none;
+    border-color: #e74c3c;
+}
+
+/* =====================
+   Generate button
+   ===================== */
+#generate-btn {
+    display: none;
+    margin: 10px 0 0;
+}
+
+/* =====================
+   Nav link back to player
+   ===================== */
+.back-link {
+    display: inline-block;
+    font-size: 13px;
+    color: #aaa;
+    text-decoration: none;
+    margin-bottom: 20px;
+}
+
+.back-link:hover {
+    color: #e74c3c;
+}
+
+/* =====================
+   Responsive
+   ===================== */
+@media (max-width: 600px) {
+    .input-row, .options-row, .mb-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .option-group input[type="number"],
+    .option-group input[type="text"] {
+        width: 100%;
+    }
+}

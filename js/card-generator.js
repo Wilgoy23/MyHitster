@@ -507,22 +507,26 @@ async function generatePDF() {
             const mirCol = (cols - 1) - col;
             const track  = playableTracks[i];
 
-            const cx    = marginX + mirCol * cardW + cardW / 2;
-            let y       = pageH - marginY - row * cardH - cardH * 0.2;
-            const textW = cardW * 0.88;
+            const cx      = marginX + mirCol * cardW + cardW / 2;
+            const cellTop = pageH - marginY - (row + 1) * cardH;
+            let y         = cellTop + cardH * 0.15;
+            const textW   = cardW * 0.88;
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(11);
             doc.setTextColor(0);
-            doc.text(track.artist, cx, y, { align: 'center' });
-            y += 18;
 
+            // Artist — bold, wrapped so long names don't overflow
+            doc.setFont('helvetica', 'bold');
+            const artistH = wrappedText(track.artist, cx, y, textW, 10);
+            y += artistH + 5;
+
+            // Title — normal weight, wrapped
             doc.setFont('helvetica', 'normal');
-            const titleH = wrappedText(track.name, cx, y, textW, 9);
+            const titleH = wrappedText(track.name, cx, y, textW, 8.5);
             y += titleH + 8;
 
+            // Year — large bold
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(15);
+            doc.setFontSize(14);
             doc.text(track.year, cx, y, { align: 'center' });
         }
     }

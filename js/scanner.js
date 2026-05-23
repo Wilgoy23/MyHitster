@@ -1,8 +1,8 @@
 /*
  scanner.js
  Manages QR code scanning via the device camera using jsQR.
- Depends on: player.js (for spotifyTrackUri, trackId, handlePlayPause)
- */
+ Depends on: player.js (loadPreviewFromUrl, trackId)
+*/
 
 let scannerActive   = false;
 let scannerLastCode = null;
@@ -91,7 +91,6 @@ function scanTick() {
             if (code && !scannerCooldown && code.data !== scannerLastCode) {
                 scannerLastCode = code.data;
 
-                // Flash green on success
                 const container = document.getElementById('scanner-container');
                 if (container) {
                     container.classList.add('scan-success-flash');
@@ -113,64 +112,54 @@ function scanTick() {
 }
 
 /*
- Parses a scanned URL and extracts the Spotify track URI.
- Supports our encoded format (?track=...) and direct Spotify URLs/URIs.
+ Parses a scanned URL and loads the preview.
+ Supports the current iTunes preview format (?preview=...).
  @param {string} url
 */
 function processScannedUrl(url) {
+    const status = document.getElementById('scanner-status');
+
     try {
-        const status = document.getElementById('scanner-status');
         status.textContent = 'Processing QR code...';
 
-        if (url.includes('track=')) {
-            // Our encoded format
-            const urlObj       = new URL(url);
-            const encodedTrack = urlObj.searchParams.get('track');
-            const qrTrackId    = urlObj.searchParams.get('id');
+        if (url.includes('preview=')) {
+            const urlObj         = new URL(url);
+            const encodedPreview = urlObj.searchParams.get('preview');
+            const qrTrackId      = urlObj.searchParams.get('id');
 
-            if (!encodedTrack) {
-                status.textContent = 'Invalid QR code: Missing track data';
+            if (!encodedPreview) {
+                status.textContent = 'Invalid QR code: missing preview data';
                 return;
             }
 
-            spotifyTrackUri = atob(encodedTrack.replace(/-/g, '+').replace(/_/g, '/'));
-            if (qrTrackId) trackId = qrTrackId;
+            const previewUrl = atob(encodedPreview.replace(/-/g, '+').replace(/_/g, '/'));
 
-        } else if (url.startsWith('spotify:') || url.includes('open.spotify.com')) {
-            // Direct Spotify link
-            status.textContent = 'Direct Spotify link detected';
-
-            if (url.startsWith('spotify:')) {
-                spotifyTrackUri = url;
-            } else {
-                const id = url.split('/track/')[1]?.split('?')[0];
-                if (!id) {
-                    status.textContent = 'Could not extract track information';
-                    return;
-                }
-                spotifyTrackUri = `spotify:track:${id}`;
+            if (qrTrackId) {
+                trackId = qrTrackId;
+                document.getElementById('mystery-id').textContent =
+                    `Mystery Track #${qrTrackId.substring(0, 6)}`;
             }
 
-            trackId = Math.floor(Math.random() * 1000000).toString(16);
+            status.textContent = 'Track found! Loading...';
+            setTimeout(() => {
+                stopScanner();
+                document.getElementById('status-message').textContent = 'New mystery track loaded!';
+                loadPreviewFromUrl(previewUrl);
+            }, 1000);
+
+        } else if (url.includes('track=')) {
+            status.textContent =
+                'Old card format detected. Please regenerate your card deck.';
+
+        } else if (url.startsWith('spotify:') || url.includes('open.spotify.com')) {
+            status.textContent = 'Spotify links are no longer supported. Use the card generator.';
 
         } else {
             status.textContent = 'Unrecognized QR code format';
-            return;
         }
 
-        // Update mystery ID display
-        const shortId = trackId ? trackId.substring(0, 6) : 'unknown';
-        document.getElementById('mystery-id').textContent = `Mystery Track #${shortId}`;
-        status.textContent = 'Track found! Loading...';
-
-        setTimeout(() => {
-            stopScanner();
-            document.getElementById('status-message').textContent = 'New mystery track loaded!';
-            if (player && deviceId && !isPlaying) handlePlayPause();
-        }, 1000);
-
     } catch (e) {
-        document.getElementById('scanner-status').textContent = 'Error processing QR code';
+        status.textContent = 'Error processing QR code';
         console.error('QR processing error:', e);
     }
 }

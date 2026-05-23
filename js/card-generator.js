@@ -1,90 +1,218 @@
 const HITSTER_URL = 'https://wilgoy23.github.io/MyHitster';
 
-let accessToken = null;
-let tracks = [];
-let playlistInfo = null;
+let tracks = [];  // [{name, artist, year, previewUrl}]
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Format detection & parsing ────────────────────────────────────────────────
 
-function init() {
-    accessToken = getValidToken();
-    if (!accessToken) {
-        document.getElementById('login-section').style.display = 'block';
-        document.getElementById('generator-section').style.display = 'none';
-    } else {
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('generator-section').style.display = 'block';
-        const name = localStorage.getItem('spotify_user_name');
-        if (name) document.getElementById('user-name').textContent = `Signed in as ${name}`;
-    }
-}
+/*
+ Parses raw text (from textarea or CSV file) into an array of
+ {artist, title} query strings for iTunes.
 
-// ── Spotify fetch ─────────────────────────────────────────────────────────────
+ Supported formats (auto-detected):
+   • CSV with headers  — Exportify, TuneMyMusic, Soundiiz, Apple Music export
+   • TSV               — Spotify desktop copy (Title \t Artist \t Album \t Duration)
+   • "Artist - Title"  — manual input (default)
+   • Numbered list     — "1. Artist - Title"
+*/
+function parseInput(raw) {
+    const text = raw.trim();
+    if (!text) return [];
 
-function extractPlaylistId(input) {
-    const urlMatch = input.match(/playlist\/([a-zA-Z0-9]+)/);
-    if (urlMatch) return urlMatch[1];
-    const uriMatch = input.match(/spotify:playlist:([a-zA-Z0-9]+)/);
-    if (uriMatch) return uriMatch[1];
-    return null;
-}
+    // CSV: has quoted fields or comma-separated header row
+    if (looksLikeCSV(text)) return parseCSV(text);
 
-async function spotifyFetch(url) {
-    const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // TSV: Spotify desktop copy — columns are Tab-separated, Title first
+    if (lines[0].includes('\t')) return parseTSV(lines);
+
+    // Plain text: "Artist - Title", "1. Artist - Title", etc.
+    return lines.map(line => {
+        // Strip leading numbering like "1." or "1)"
+        const stripped = line.replace(/^\d+[\.\)]\s*/, '').trim();
+        return stripped;
     });
-    if (!response.ok) throw new Error(`Spotify API error ${response.status}`);
-    return response.json();
 }
 
-async function fetchPlaylistTracks() {
-    const input = document.getElementById('playlist-url').value.trim();
-    const playlistId = extractPlaylistId(input);
-    if (!playlistId) {
-        showStatus('Invalid Spotify playlist URL or URI.', 'error');
+function looksLikeCSV(text) {
+    const first = text.split('\n')[0];
+    // Has a quoted field, or has multiple comma-separated values with a header
+    return /^"/.test(first.trim()) || (first.includes(',') && /artist|track|title|song/i.test(first));
+}
+
+/*
+ Parses CSV text. Detects column headers to extract artist + title.
+ Falls back to first two columns if headers are unrecognised.
+*/
+function parseCSV(text) {
+    const rows = splitCSVRows(text);
+    if (rows.length < 2) return [];
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+
+    // Find artist and track columns by common header names
+    const artistCol = findCol(headers, ['artist name(s)', 'artist name', 'artist', 'creator']);
+    const titleCol  = findCol(headers, ['track name', 'title', 'song', 'name', 'track']);
+
+    if (artistCol === -1 || titleCol === -1) {
+        // No recognisable headers — treat as two-column (col 0 = artist, col 1 = title)
+        return rows.slice(1)
+            .filter(r => r.length >= 2)
+            .map(r => `${r[0].trim()} ${r[1].trim()}`);
+    }
+
+    return rows.slice(1)
+        .filter(r => r[artistCol] || r[titleCol])
+        .map(r => `${(r[artistCol] || '').trim()} ${(r[titleCol] || '').trim()}`.trim());
+}
+
+function findCol(headers, candidates) {
+    for (const c of candidates) {
+        const idx = headers.indexOf(c);
+        if (idx !== -1) return idx;
+    }
+    // Partial match
+    for (const c of candidates) {
+        const idx = headers.findIndex(h => h.includes(c));
+        if (idx !== -1) return idx;
+    }
+    return -1;
+}
+
+/* Splits a CSV string into a 2D array of fields, handling quoted fields. */
+function splitCSVRows(text) {
+    const rows = [];
+    for (const rawLine of text.split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const fields = [];
+        let field = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+                else inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+                fields.push(field);
+                field = '';
+            } else {
+                field += ch;
+            }
+        }
+        fields.push(field);
+        rows.push(fields);
+    }
+    return rows;
+}
+
+/*
+ Parses Spotify desktop copy format: Title \t Artist \t Album \t Duration
+ (title comes first, artist second).
+*/
+function parseTSV(lines) {
+    return lines.map(line => {
+        const parts = line.split('\t');
+        const title  = (parts[0] || '').trim();
+        const artist = (parts[1] || '').trim();
+        return artist ? `${artist} ${title}` : title;
+    }).filter(Boolean);
+}
+
+/* Handles a CSV file dropped or selected via the file input. */
+function handleFileUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('track-input').value = e.target.result;
+        showStatus(`Loaded "${file.name}". Click "Search iTunes" to continue.`, 'success');
+    };
+    reader.readAsText(file);
+}
+
+// ── Track input & iTunes search ───────────────────────────────────────────────
+
+async function searchTracks() {
+    const input = document.getElementById('track-input').value.trim();
+    if (!input) {
+        showStatus('Please upload a CSV or paste a track list.', 'error');
         return;
     }
 
-    setLoading(true, 'Fetching playlist info…');
     tracks = [];
     document.getElementById('track-list-section').style.display = 'none';
     document.getElementById('generate-btn').style.display = 'none';
 
-    try {
-        const pl = await spotifyFetch(
-            `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,owner(display_name)`
-        );
-        playlistInfo = { name: pl.name, owner: pl.owner.display_name };
+    const queries = parseInput(input).filter(q => q.length > 0);
+    if (!queries.length) {
+        showStatus('Could not parse any tracks from the input.', 'error');
+        return;
+    }
 
-        let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks` +
-            `?limit=100&fields=next,items(track(name,artists,album(name,release_date,images),external_urls))`;
+    setLoading(true, `Searching iTunes… (0 / ${queries.length})`);
 
-        while (url) {
-            updateStatus(`Fetching tracks… (${tracks.length} so far)`);
-            const data = await spotifyFetch(url);
-            for (const item of data.items) {
-                if (!item.track || !item.track.external_urls) continue;
-                const t = item.track;
-                const rawDate = t.album.release_date || '';
-                const year = rawDate.length >= 4 ? rawDate.substring(0, 4) : 'Unknown';
-                tracks.push({
-                    name: cleanSongTitle(t.name),
-                    artist: t.artists[0].name,
-                    album: t.album.name,
-                    year,
-                    url: t.external_urls.spotify,
-                });
+    let notFound = 0;
+    let noPreview = 0;
+
+    for (let i = 0; i < queries.length; i++) {
+        updateStatus(`Searching iTunes… (${i + 1} / ${queries.length}): ${queries[i]}`);
+
+        try {
+            const result = await searchItunes(queries[i]);
+            if (result) {
+                tracks.push(result);
+                if (!result.previewUrl) noPreview++;
+            } else {
+                tracks.push({ name: queries[i], artist: '', year: 'Unknown', previewUrl: null, notFound: true });
+                notFound++;
             }
-            url = data.next || null;
+        } catch (e) {
+            tracks.push({ name: queries[i], artist: '', year: 'Unknown', previewUrl: null, notFound: true });
+            notFound++;
         }
 
-        showStatus(`Found ${tracks.length} tracks in "${playlistInfo.name}".`, 'success');
-        renderTrackList();
-    } catch (e) {
-        showStatus(`Error: ${e.message}`, 'error');
-    } finally {
-        setLoading(false);
+        if (i < queries.length - 1) await sleep(250);
     }
+
+    setLoading(false);
+
+    let statusMsg = `Found ${tracks.length - notFound} of ${queries.length} tracks.`;
+    if (notFound > 0)  statusMsg += ` ${notFound} not found.`;
+    if (noPreview > 0) statusMsg += ` ${noPreview} have no preview available.`;
+    showStatus(statusMsg, notFound > 0 ? 'warning' : 'success');
+
+    renderTrackList();
+}
+
+/*
+ Searches the iTunes Search API for a query string.
+ Returns the best match with a previewUrl, or the best match without one,
+ or null if nothing was found.
+ @param {string} query
+ @returns {Object|null}
+*/
+async function searchItunes(query) {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&media=music&limit=10`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`iTunes API error ${resp.status}`);
+    const data = await resp.json();
+
+    if (!data.results?.length) return null;
+
+    // Prefer a result with a preview URL
+    const withPreview = data.results.find(r => r.previewUrl);
+    const best = withPreview || data.results[0];
+
+    const rawDate = best.releaseDate || '';
+    const year = rawDate ? new Date(rawDate).getFullYear().toString() : 'Unknown';
+
+    return {
+        name:       cleanSongTitle(best.trackName || ''),
+        artist:     best.artistName || '',
+        year,
+        previewUrl: best.previewUrl || null,
+        album:      best.collectionName || '',
+    };
 }
 
 // ── Track title cleanup ───────────────────────────────────────────────────────
@@ -119,14 +247,26 @@ function renderTrackList() {
     tracks.forEach((track, i) => {
         const yr = parseInt(track.year);
         const outOfRange = !isNaN(yr) && minYear > 0 && (yr < minYear || yr > maxYear);
+        const noPreview  = !track.previewUrl;
+        const notFound   = track.notFound;
+
         const tr = document.createElement('tr');
-        if (outOfRange) tr.className = 'out-of-range';
+        if (notFound)      tr.className = 'not-found';
+        else if (noPreview) tr.className = 'no-preview';
+        else if (outOfRange) tr.className = 'out-of-range';
+
+        const previewBadge = notFound
+            ? '<span class="badge badge-error">Not found</span>'
+            : noPreview
+                ? '<span class="badge badge-warning">No preview</span>'
+                : '<span class="badge badge-ok">&#10003;</span>';
+
         tr.innerHTML =
             `<td>${i + 1}</td>` +
             `<td>${escHtml(track.artist)}</td>` +
             `<td>${escHtml(track.name)}</td>` +
-            `<td><input type="text" class="year-input" value="${escHtml(track.year)}" ` +
-            `data-idx="${i}" maxlength="4"></td>`;
+            `<td><input type="text" class="year-input" value="${escHtml(track.year)}" data-idx="${i}" maxlength="4"></td>` +
+            `<td>${previewBadge}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -138,14 +278,11 @@ function renderTrackList() {
     });
 
     document.getElementById('track-list-section').style.display = 'block';
-    document.getElementById('generate-btn').style.display = 'inline-block';
 
-    const outCount = tbody.querySelectorAll('.out-of-range').length;
-    if (outCount > 0 && minYear > 0) {
-        showStatus(
-            `${tracks.length} tracks loaded. ${outCount} are outside the ${minYear}–${maxYear} range (highlighted in yellow).`,
-            'warning'
-        );
+    const playable = tracks.filter(t => t.previewUrl).length;
+    document.getElementById('generate-btn').style.display = playable > 0 ? 'inline-block' : 'none';
+    if (playable === 0) {
+        showStatus('No tracks with previews found. Cannot generate PDF.', 'error');
     }
 }
 
@@ -172,8 +309,9 @@ async function verifyWithMusicBrainz() {
 
     for (let i = 0; i < tracks.length && count < maxLookups; i++) {
         const track = tracks[i];
-        const yr = parseInt(track.year);
+        if (!track.previewUrl) continue;
 
+        const yr = parseInt(track.year);
         let suspicious = isNaN(yr) || yr > 2020;
         if (!suspicious && yr > 2010) {
             suspicious = CLASSIC_ARTISTS.some(a => track.artist.toLowerCase().includes(a));
@@ -210,7 +348,7 @@ async function verifyWithMusicBrainz() {
 async function queryMusicBrainz(artist, title) {
     const clean = title.split('(')[0].split('[')[0].trim();
     const query = encodeURIComponent(`recording:${clean} AND artist:${artist}`);
-    const url = `https://musicbrainz.org/ws/2/recording/?query=${query}&fmt=json&limit=10`;
+    const url   = `https://musicbrainz.org/ws/2/recording/?query=${query}&fmt=json&limit=10`;
 
     const resp = await fetch(url, {
         headers: { 'User-Agent': 'MyHitster/1.0 (github.com/wilgoy23/MyHitster)' }
@@ -240,15 +378,14 @@ async function sha256hex(str) {
         .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function buildQrUrl(spotifyTrackUrl) {
-    const trackId = spotifyTrackUrl.split('/').pop().split('?')[0];
-    const uri = `spotify:track:${trackId}`;
-    const encoded = btoa(uri).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    return { encoded, uri };
+function buildQrUrl(previewUrl, cardHash) {
+    const encoded = btoa(previewUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return `${HITSTER_URL}/index.html?id=${cardHash}&preview=${encoded}`;
 }
 
 async function generatePDF() {
-    if (!tracks.length) return;
+    const playableTracks = tracks.filter(t => t.previewUrl);
+    if (!playableTracks.length) return;
 
     const { jsPDF } = window.jspdf;
     const pageW = 612, pageH = 792;
@@ -261,19 +398,20 @@ async function generatePDF() {
 
     // Generate QR data URLs
     const qrDataUrls = [];
-    for (let i = 0; i < tracks.length; i++) {
-        updateStatus(`Generating QR code ${i + 1} / ${tracks.length}…`);
-        setLoading(true, `Generating QR code ${i + 1} / ${tracks.length}…`);
-        const { encoded } = buildQrUrl(tracks[i].url);
-        const hex = await sha256hex(tracks[i].url);
-        const qrUrl = `${HITSTER_URL}/index.html?id=${hex.substring(0, 12)}&track=${encoded}`;
+    for (let i = 0; i < playableTracks.length; i++) {
+        setLoading(true, `Generating QR code ${i + 1} / ${playableTracks.length}…`);
+        const track   = playableTracks[i];
+        const hex     = await sha256hex(track.previewUrl);
+        const cardId  = hex.substring(0, 12);
+        const qrUrl   = buildQrUrl(track.previewUrl, cardId);
+
         try {
             const dataUrl = await QRCode.toDataURL(qrUrl, {
                 width: 300, margin: 2, errorCorrectionLevel: 'L',
             });
             qrDataUrls.push(dataUrl);
         } catch (e) {
-            console.error('QR generation error:', e);
+            console.error('QR error:', e);
             qrDataUrls.push(null);
         }
     }
@@ -296,18 +434,16 @@ async function generatePDF() {
     }
 
     function drawGuides() {
-        const len = 15;
         doc.setDrawColor(180);
         doc.setLineWidth(0.3);
-        // corner crop marks
-        [[0, pageH - marginY, len, pageH - marginY],
-         [marginX, pageH, marginX, pageH - len],
-         [pageW - len, pageH - marginY, pageW, pageH - marginY],
-         [pageW - marginX, pageH, pageW - marginX, pageH - len],
-         [0, marginY, len, marginY],
-         [marginX, 0, marginX, len],
-         [pageW - len, marginY, pageW, marginY],
-         [pageW - marginX, 0, pageW - marginX, len],
+        [[0, pageH - marginY, 15, pageH - marginY],
+         [marginX, pageH, marginX, pageH - 15],
+         [pageW - 15, pageH - marginY, pageW, pageH - marginY],
+         [pageW - marginX, pageH, pageW - marginX, pageH - 15],
+         [0, marginY, 15, marginY],
+         [marginX, 0, marginX, 15],
+         [pageW - 15, marginY, pageW, marginY],
+         [pageW - marginX, 0, pageW - marginX, 15],
         ].forEach(([x1, y1, x2, y2]) => doc.line(x1, y1, x2, y2));
         doc.setDrawColor(0);
         doc.setLineWidth(0.5);
@@ -329,11 +465,11 @@ async function generatePDF() {
         return lines.length * lh;
     }
 
-    const totalPages = Math.ceil(tracks.length / perPage);
+    const totalPages = Math.ceil(playableTracks.length / perPage);
 
     for (let page = 0; page < totalPages; page++) {
         const start = page * perPage;
-        const end = Math.min(start + perPage, tracks.length);
+        const end   = Math.min(start + perPage, playableTracks.length);
 
         // ── QR page ──
         if (page > 0) doc.addPage();
@@ -349,8 +485,8 @@ async function generatePDF() {
             const rel = i - start;
             const row = Math.floor(rel / cols);
             const col = rel % cols;
-            const x = marginX + col * cardW + (cardW - qrSize) / 2;
-            const y = pageH - marginY - row * cardH - (cardH + qrSize) / 2;
+            const x   = marginX + col * cardW + (cardW - qrSize) / 2;
+            const y   = pageH - marginY - row * cardH - (cardH + qrSize) / 2;
             if (qrDataUrls[i]) doc.addImage(qrDataUrls[i], 'PNG', x, y, qrSize, qrSize);
         }
 
@@ -365,14 +501,14 @@ async function generatePDF() {
         doc.text(`Info page ${page + 1}/${totalPages}`, pageW - marginX, 15, { align: 'right' });
 
         for (let i = start; i < end; i++) {
-            const rel = i - start;
-            const row = Math.floor(rel / cols);
-            const col = rel % cols;
+            const rel    = i - start;
+            const row    = Math.floor(rel / cols);
+            const col    = rel % cols;
             const mirCol = (cols - 1) - col;
-            const track = tracks[i];
+            const track  = playableTracks[i];
 
-            const cx = marginX + mirCol * cardW + cardW / 2;
-            let y = pageH - marginY - row * cardH - cardH * 0.2;
+            const cx    = marginX + mirCol * cardW + cardW / 2;
+            let y       = pageH - marginY - row * cardH - cardH * 0.2;
             const textW = cardW * 0.88;
 
             doc.setFont('helvetica', 'bold');
@@ -391,8 +527,8 @@ async function generatePDF() {
         }
     }
 
-    const safeName = (playlistInfo?.name || 'cards').replace(/[^a-z0-9]/gi, '_');
-    doc.save(`Hitster_${safeName}.pdf`);
+    const filename = `Hitster_cards.pdf`;
+    doc.save(filename);
 
     setLoading(false);
     showStatus(
@@ -415,9 +551,9 @@ function updateStatus(msg) {
 function showStatus(msg, type = '') {
     const el = document.getElementById('status-message');
     el.textContent = msg;
-    el.className = type === 'error' ? 'status error' :
-                   type === 'success' ? 'status success-msg' :
-                   type === 'warning' ? 'status warning-msg' : 'status';
+    el.className = type === 'error'   ? 'status error'       :
+                   type === 'success' ? 'status success-msg'  :
+                   type === 'warning' ? 'status warning-msg'  : 'status';
 }
 
 function sleep(ms) {
@@ -427,14 +563,22 @@ function sleep(ms) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 window.onload = () => {
-    init();
-    document.getElementById('login-button')?.addEventListener('click', initiateLogin);
-    document.getElementById('fetch-btn').addEventListener('click', fetchPlaylistTracks);
+    document.getElementById('search-btn').addEventListener('click', searchTracks);
     document.getElementById('verify-btn').addEventListener('click', verifyWithMusicBrainz);
     document.getElementById('generate-btn').addEventListener('click', generatePDF);
     document.getElementById('year-filter-apply').addEventListener('click', renderTrackList);
 
-    document.getElementById('playlist-url').addEventListener('keydown', e => {
-        if (e.key === 'Enter') fetchPlaylistTracks();
+    const fileInput = document.getElementById('csv-upload');
+    fileInput.addEventListener('change', e => handleFileUpload(e.target.files[0]));
+
+    // Drag-and-drop onto the textarea
+    const textarea = document.getElementById('track-input');
+    textarea.addEventListener('dragover', e => { e.preventDefault(); textarea.classList.add('drag-over'); });
+    textarea.addEventListener('dragleave', () => textarea.classList.remove('drag-over'));
+    textarea.addEventListener('drop', e => {
+        e.preventDefault();
+        textarea.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileUpload(file);
     });
 };

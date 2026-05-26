@@ -15,8 +15,33 @@
 
       <!-- ── Step 1: Import ── -->
       <div class="panel">
-        <h2>1 &mdash; Get your playlist</h2>
+        <h2>1 &mdash; Get your tracks</h2>
 
+        <!-- ── Option A: Playlist URL ── -->
+        <p class="section-label">Paste a playlist URL</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 10px">Works with public Deezer playlists. Each track is matched to an iTunes 30-second preview.</p>
+        <div class="input-row">
+          <input type="text" id="playlist-url-input" placeholder="https://www.deezer.com/playlist/…" />
+          <button class="btn" id="playlist-import-btn">Import</button>
+        </div>
+
+        <div class="or-divider">— or search iTunes for an album / artist —</div>
+
+        <!-- ── Option B: iTunes direct search ── -->
+        <p class="section-label">Search iTunes</p>
+        <div class="search-tab-row">
+          <button class="tab-btn active" data-tab="album">Album</button>
+          <button class="tab-btn" data-tab="artist">Artist</button>
+        </div>
+        <div class="input-row" style="margin:10px 0 0">
+          <input type="text" id="itunes-search-input" placeholder="e.g. Abbey Road, Dark Side of the Moon…" />
+          <button class="btn" id="itunes-search-btn">Search</button>
+        </div>
+        <div id="itunes-results" class="itunes-results"></div>
+
+        <div class="or-divider">— or import from a playlist file —</div>
+
+        <!-- ── Option C: Exportify / CSV / paste ── -->
         <div class="exportify-box">
           <div class="exportify-steps">
             <span class="step-num">1</span>

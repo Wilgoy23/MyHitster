@@ -130,6 +130,245 @@ function handleFileUpload(file) {
     reader.readAsText(file);
 }
 
+// ── Playlist URL import ───────────────────────────────────────────────────────
+
+async function importPlaylistUrl() {
+    const url = document.getElementById('playlist-url-input').value.trim();
+    if (!url) {
+        showStatus('Paste a Deezer playlist URL first.', 'error');
+        return;
+    }
+    try {
+        const u = new URL(url);
+        const m = u.pathname.match(/\/playlist\/(\d+)/);
+        if (!m) {
+            showStatus('URL not recognised — paste a deezer.com/playlist/… link.', 'error');
+            return;
+        }
+        await importDeezerPlaylist(m[1]);
+    } catch {
+        showStatus('Invalid URL — paste a deezer.com/playlist/… link.', 'error');
+    }
+}
+
+// ── Deezer import ─────────────────────────────────────────────────────────────
+
+function deezerJSONP(url) {
+    return new Promise((resolve, reject) => {
+        const cb = 'dz_' + Date.now();
+        const script = document.createElement('script');
+        window[cb] = data => { delete window[cb]; script.remove(); resolve(data); };
+        script.onerror = () => { delete window[cb]; script.remove(); reject(new Error('Failed to reach Deezer API')); };
+        script.src = `${url}&output=jsonp&callback=${cb}`;
+        document.head.appendChild(script);
+    });
+}
+
+async function importDeezerPlaylist(playlistId) {
+    setLoading(true, 'Fetching Deezer playlist…');
+    const trackList = [];
+    let index = 0;
+
+    try {
+        while (true) {
+            const page = await deezerJSONP(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=100&index=${index}`);
+            if (page.error) throw new Error(page.error.message || 'Playlist not found or private');
+
+            for (const track of (page.data || [])) {
+                if (track.title && track.artist?.name) {
+                    trackList.push({ artist: track.artist.name, title: track.title });
+                }
+            }
+            if (!page.next) break;
+            index += 100;
+        }
+
+        if (!trackList.length) {
+            setLoading(false);
+            showStatus('Playlist is empty or private.', 'error');
+            return;
+        }
+        await searchItunesForTracks(trackList);
+    } catch (e) {
+        setLoading(false);
+        showStatus(`Deezer error: ${e.message}`, 'error');
+    }
+}
+
+// ── Shared: search iTunes for a [{artist, title}] list ───────────────────────
+
+async function searchItunesForTracks(trackList) {
+    tracks = [];
+    document.getElementById('track-list-section').style.display = 'none';
+    document.getElementById('generate-btn').style.display = 'none';
+
+    setLoading(true, `Searching iTunes… (0 / ${trackList.length})`);
+    let notFound = 0, noPreview = 0;
+
+    for (let i = 0; i < trackList.length; i++) {
+        const { artist, title } = trackList[i];
+        const query = artist ? `${artist} ${title}` : title;
+        updateStatus(`Searching iTunes… (${i + 1} / ${trackList.length}): ${query}`);
+
+        try {
+            const result = await searchItunes(query);
+            if (result) {
+                tracks.push(result);
+                if (!result.previewUrl) noPreview++;
+            } else {
+                tracks.push({ name: title, artist, year: 'Unknown', previewUrl: null, notFound: true });
+                notFound++;
+            }
+        } catch {
+            tracks.push({ name: title, artist, year: 'Unknown', previewUrl: null, notFound: true });
+            notFound++;
+        }
+
+        if (i < trackList.length - 1) await sleep(250);
+    }
+
+    setLoading(false);
+    let msg = `Found ${tracks.length - notFound} of ${trackList.length} tracks on iTunes.`;
+    if (notFound > 0) msg += ` ${notFound} not found.`;
+    if (noPreview > 0) msg += ` ${noPreview} have no preview.`;
+    showStatus(msg, notFound > 0 ? 'warning' : 'success');
+    renderTrackList();
+}
+
+// ── iTunes album / artist search ─────────────────────────────────────────────
+
+let searchTab = 'album';
+
+async function searchItunesCollection() {
+    const query = document.getElementById('itunes-search-input').value.trim();
+    if (!query) return;
+
+    const resultsEl = document.getElementById('itunes-results');
+    resultsEl.innerHTML = '<p style="color:#aaa;font-size:13px;padding:8px 0">Searching…</p>';
+
+    try {
+        const entity = searchTab === 'album' ? 'album' : 'musicArtist';
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=${entity}&media=music&limit=12`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (!data.results?.length) {
+            resultsEl.innerHTML = '<p style="color:#aaa;font-size:13px;padding:8px 0">No results found.</p>';
+            return;
+        }
+        renderItunesResults(data.results, resultsEl);
+    } catch (e) {
+        resultsEl.innerHTML = '<p style="color:#e74c3c;font-size:13px;padding:8px 0">Search failed. Please try again.</p>';
+    }
+}
+
+function renderItunesResults(results, container) {
+    container.innerHTML = '';
+    results.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+
+        if (searchTab === 'album') {
+            const artwork = (item.artworkUrl100 || '').replace('100x100bb', '60x60bb');
+            const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : '';
+            const trackCount = item.trackCount ? ` · ${item.trackCount} tracks` : '';
+            card.innerHTML =
+                `<img class="result-artwork" src="${escHtml(artwork)}" alt="" onerror="this.style.display='none'">` +
+                `<div class="result-info">` +
+                    `<div class="result-name">${escHtml(item.collectionName)}</div>` +
+                    `<div class="result-sub">${escHtml(item.artistName)}${year ? ' · ' + year : ''}${trackCount}</div>` +
+                `</div>`;
+            card.addEventListener('click', () => loadAlbumTracks(item.collectionId, item.collectionName, item.artistName));
+        } else {
+            card.innerHTML =
+                `<div class="result-info">` +
+                    `<div class="result-name">${escHtml(item.artistName)}</div>` +
+                    `<div class="result-sub">Artist</div>` +
+                `</div>`;
+            card.addEventListener('click', () => loadArtistTracks(item.artistId, item.artistName));
+        }
+        container.appendChild(card);
+    });
+}
+
+async function loadAlbumTracks(collectionId, albumName, artistName) {
+    document.getElementById('itunes-results').innerHTML = '';
+    setLoading(true, `Loading "${albumName}"…`);
+
+    try {
+        const url = `https://itunes.apple.com/lookup?id=${collectionId}&entity=song`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        const songs = data.results.filter(r => r.wrapperType === 'track' && r.kind === 'song');
+        if (!songs.length) {
+            setLoading(false);
+            showStatus('No tracks found for this album.', 'error');
+            return;
+        }
+
+        tracks = songs.map(s => ({
+            name:       cleanSongTitle(s.trackName || ''),
+            artist:     s.artistName || artistName,
+            year:       s.releaseDate ? new Date(s.releaseDate).getFullYear().toString() : 'Unknown',
+            previewUrl: s.previewUrl || null,
+            album:      albumName,
+            notFound:   false,
+        }));
+
+        setLoading(false);
+        const noPreview = tracks.filter(t => !t.previewUrl).length;
+        showStatus(
+            `Loaded ${tracks.length} tracks from "${albumName}".` +
+            (noPreview ? ` ${noPreview} have no preview available.` : ''),
+            noPreview === tracks.length ? 'error' : noPreview > 0 ? 'warning' : 'success'
+        );
+        renderTrackList();
+    } catch (e) {
+        setLoading(false);
+        showStatus('Failed to load album tracks. Please try again.', 'error');
+    }
+}
+
+async function loadArtistTracks(artistId, artistName) {
+    document.getElementById('itunes-results').innerHTML = '';
+    setLoading(true, `Loading tracks for "${artistName}"…`);
+
+    try {
+        const url = `https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=50`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        const songs = data.results.filter(r => r.wrapperType === 'track' && r.kind === 'song');
+        if (!songs.length) {
+            setLoading(false);
+            showStatus('No tracks found for this artist.', 'error');
+            return;
+        }
+
+        tracks = songs.map(s => ({
+            name:       cleanSongTitle(s.trackName || ''),
+            artist:     s.artistName || artistName,
+            year:       s.releaseDate ? new Date(s.releaseDate).getFullYear().toString() : 'Unknown',
+            previewUrl: s.previewUrl || null,
+            album:      s.collectionName || '',
+            notFound:   false,
+        }));
+
+        setLoading(false);
+        const noPreview = tracks.filter(t => !t.previewUrl).length;
+        showStatus(
+            `Loaded ${tracks.length} tracks for "${artistName}".` +
+            (noPreview ? ` ${noPreview} have no preview available.` : ''),
+            noPreview > 0 ? 'warning' : 'success'
+        );
+        renderTrackList();
+    } catch (e) {
+        setLoading(false);
+        showStatus('Failed to load artist tracks. Please try again.', 'error');
+    }
+}
+
 // ── Track input & iTunes search ───────────────────────────────────────────────
 
 async function searchTracks() {
@@ -138,50 +377,12 @@ async function searchTracks() {
         showStatus('Please upload a CSV or paste a track list.', 'error');
         return;
     }
-
-    tracks = [];
-    document.getElementById('track-list-section').style.display = 'none';
-    document.getElementById('generate-btn').style.display = 'none';
-
     const queries = parseInput(input).filter(q => q.length > 0);
     if (!queries.length) {
         showStatus('Could not parse any tracks from the input.', 'error');
         return;
     }
-
-    setLoading(true, `Searching iTunes… (0 / ${queries.length})`);
-
-    let notFound = 0;
-    let noPreview = 0;
-
-    for (let i = 0; i < queries.length; i++) {
-        updateStatus(`Searching iTunes… (${i + 1} / ${queries.length}): ${queries[i]}`);
-
-        try {
-            const result = await searchItunes(queries[i]);
-            if (result) {
-                tracks.push(result);
-                if (!result.previewUrl) noPreview++;
-            } else {
-                tracks.push({ name: queries[i], artist: '', year: 'Unknown', previewUrl: null, notFound: true });
-                notFound++;
-            }
-        } catch (e) {
-            tracks.push({ name: queries[i], artist: '', year: 'Unknown', previewUrl: null, notFound: true });
-            notFound++;
-        }
-
-        if (i < queries.length - 1) await sleep(250);
-    }
-
-    setLoading(false);
-
-    let statusMsg = `Found ${tracks.length - notFound} of ${queries.length} tracks.`;
-    if (notFound > 0)  statusMsg += ` ${notFound} not found.`;
-    if (noPreview > 0) statusMsg += ` ${noPreview} have no preview available.`;
-    showStatus(statusMsg, notFound > 0 ? 'warning' : 'success');
-
-    renderTrackList();
+    await searchItunesForTracks(queries.map(q => ({ artist: '', title: q })));
 }
 
 /*
@@ -567,6 +768,26 @@ function sleep(ms) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 window.onload = () => {
+    // Playlist URL import
+    document.getElementById('playlist-import-btn').addEventListener('click', importPlaylistUrl);
+    document.getElementById('playlist-url-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') importPlaylistUrl();
+    });
+
+    // iTunes collection search
+    document.getElementById('itunes-search-btn').addEventListener('click', searchItunesCollection);
+    document.getElementById('itunes-search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') searchItunesCollection();
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            searchTab = btn.dataset.tab;
+            document.getElementById('itunes-results').innerHTML = '';
+        });
+    });
+
     document.getElementById('search-btn').addEventListener('click', searchTracks);
     document.getElementById('verify-btn').addEventListener('click', verifyWithMusicBrainz);
     document.getElementById('generate-btn').addEventListener('click', generatePDF);

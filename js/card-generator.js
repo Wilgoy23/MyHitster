@@ -4,6 +4,14 @@ import { searchItunes, searchItunesEntities,
 import { fetchDeezerPlaylistTracks }                           from './deezer.js';
 import { queryMusicBrainz }                                    from './musicbrainz.js';
 import { generatePDF }                                         from './pdf.js';
+import { isConfigured }                                        from './supabase.js';
+import { getUser, onAuthStateChange }                          from './auth.js';
+import {
+    saveDeck, getDeckByShareToken, uploadPdf,
+    setDeckPublic, setOnLoadDeck,
+    getCurrentDeckId, getCurrentShareToken, setCurrentDeck,
+    buildShareUrl,
+} from './decks.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -292,8 +300,19 @@ async function verifyWithMusicBrainz() {
 async function handleGeneratePDF() {
     setLoading(true, 'Starting PDF generation…');
     try {
-        await generatePDF(tracks, msg => updateStatus(msg));
+        const blob = await generatePDF(tracks, msg => updateStatus(msg));
         showStatus('PDF downloaded! Print double-sided with "Flip on short edge" for correct alignment.', 'success');
+
+        if (isConfigured && getUser() && getCurrentDeckId() && blob) {
+            try {
+                updateStatus('Uploading PDF to your account…');
+                const playable = tracks.filter(t => t.previewUrl).length;
+                await uploadPdf(getCurrentDeckId(), blob, playable);
+                setDeckSaveStatus('PDF saved to history.');
+            } catch (e) {
+                console.warn('PDF upload failed:', e);
+            }
+        }
     } catch (e) {
         showStatus(`PDF generation failed: ${e.message}`, 'error');
     } finally {
@@ -344,6 +363,13 @@ function renderTrackList() {
     const playable = tracks.filter(t => t.previewUrl).length;
     document.getElementById('generate-btn').style.display = playable > 0 ? 'inline-block' : 'none';
     if (playable === 0) showStatus('No tracks with previews found. Cannot generate PDF.', 'error');
+
+    if (isConfigured) {
+        const toolbar = document.getElementById('deck-toolbar');
+        if (toolbar) toolbar.style.display = getUser() && playable > 0 ? 'flex' : 'none';
+        const shareBtn = document.getElementById('share-deck-btn');
+        if (shareBtn) shareBtn.style.display = getCurrentDeckId() ? 'inline-block' : 'none';
+    }
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
@@ -373,9 +399,87 @@ function escHtml(str) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+function setDeckSaveStatus(msg, ok = true) {
+    const el = document.getElementById('deck-save-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = ok ? '#4ade80' : '#e74c3c';
+    if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+}
+
+// ── Deck feature handlers ──────────────────────────────────────────────────────
+
+async function handleSaveDeck() {
+    const nameInput = document.getElementById('deck-name-input');
+    const name = nameInput.value.trim();
+    if (!name) {
+        nameInput.focus();
+        setDeckSaveStatus('Enter a deck name first.', false);
+        return;
+    }
+    const btn = document.getElementById('save-deck-btn');
+    btn.disabled = true;
+    setDeckSaveStatus('Saving…');
+    try {
+        await saveDeck(name, tracks, getCurrentDeckId());
+        setDeckSaveStatus('Saved!');
+        const shareBtn = document.getElementById('share-deck-btn');
+        if (shareBtn) shareBtn.style.display = 'inline-block';
+    } catch (e) {
+        setDeckSaveStatus(e.message, false);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function handleShareDeck() {
+    const btn = document.getElementById('share-deck-btn');
+    const deckId = getCurrentDeckId();
+    if (!deckId) return;
+    btn.disabled = true;
+    try {
+        let token = getCurrentShareToken();
+        if (!token) {
+            const result = await setDeckPublic(deckId, true);
+            token = result.share_token;
+        } else {
+            await setDeckPublic(deckId, true);
+        }
+        await navigator.clipboard.writeText(buildShareUrl(token));
+        const prev = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = prev; }, 2000);
+    } catch (e) {
+        setDeckSaveStatus('Could not copy link: ' + e.message, false);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function loadSharedDeck(token) {
+    setLoading(true, 'Loading shared deck…');
+    try {
+        const deck = await getDeckByShareToken(token);
+        if (!deck || !Array.isArray(deck.tracks) || !deck.tracks.length) {
+            setLoading(false);
+            showStatus('Shared deck not found or has no tracks.', 'error');
+            return;
+        }
+        tracks = deck.tracks;
+        setCurrentDeck(deck.id, deck.share_token);
+        document.getElementById('deck-name-input').value = deck.name;
+        setLoading(false);
+        showStatus(`Loaded shared deck "${deck.name}" (${tracks.length} tracks).`, 'success');
+        renderTrackList();
+    } catch (e) {
+        setLoading(false);
+        showStatus(`Failed to load shared deck: ${e.message}`, 'error');
+    }
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-window.onload = () => {
+async function _init() {
     // Deezer playlist import
     document.getElementById('playlist-import-btn').addEventListener('click', importPlaylistUrl);
     document.getElementById('playlist-url-input').addEventListener('keydown', e => {
@@ -414,4 +518,39 @@ window.onload = () => {
     document.getElementById('year-filter-apply').addEventListener('click', renderTrackList);
     document.getElementById('verify-btn').addEventListener('click', verifyWithMusicBrainz);
     document.getElementById('generate-btn').addEventListener('click', handleGeneratePDF);
-};
+
+    // ── Deck / auth features (only when Supabase is configured) ──
+    if (isConfigured) {
+        document.getElementById('save-deck-btn').addEventListener('click', handleSaveDeck);
+        document.getElementById('share-deck-btn').addEventListener('click', handleShareDeck);
+        document.getElementById('deck-name-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleSaveDeck();
+        });
+
+        // Update toolbar visibility when auth state changes
+        onAuthStateChange(user => {
+            const toolbar = document.getElementById('deck-toolbar');
+            if (!toolbar) return;
+            const playable = tracks.filter(t => t.previewUrl).length;
+            toolbar.style.display = user && playable > 0 ? 'flex' : 'none';
+        });
+
+        // Register callback for "Load" button in My Decks panel
+        setOnLoadDeck(deck => {
+            tracks = deck.tracks;
+            document.getElementById('deck-name-input').value = deck.name;
+            renderTrackList();
+            showStatus(`Loaded deck "${deck.name}".`, 'success');
+        });
+
+        // Auto-load shared deck from URL
+        const token = new URLSearchParams(window.location.search).get('deck');
+        if (token) loadSharedDeck(token);
+    }
+}
+
+if (document.readyState === 'complete') {
+    _init();
+} else {
+    window.addEventListener('load', _init);
+}

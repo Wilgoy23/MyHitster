@@ -142,5 +142,7 @@ export async function generatePDF(tracks, onProgress = () => {}) {
         }
     }
 
+    const blob = doc.output('blob');
     doc.save('Hitster_cards.pdf');
+    return blob;
 }

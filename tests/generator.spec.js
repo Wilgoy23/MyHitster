@@ -1,5 +1,39 @@
 const { test, expect } = require('@playwright/test');
 
+const MOCK_ALBUM_SEARCH = {
+    results: [{
+        wrapperType: 'collection',
+        collectionType: 'Album',
+        collectionId: 99999,
+        collectionName: 'A Night at the Opera',
+        artistName: 'Queen',
+        releaseDate: '1975-11-21T08:00:00Z',
+        trackCount: 12,
+        artworkUrl100: 'https://example.com/art100x100bb.jpg',
+    }],
+};
+
+const MOCK_ALBUM_TRACKS = {
+    results: [
+        { wrapperType: 'artist', artistName: 'Queen' },
+        {
+            wrapperType: 'track', kind: 'song',
+            trackName: 'Bohemian Rhapsody', artistName: 'Queen',
+            collectionName: 'A Night at the Opera',
+            releaseDate: '1975-10-31T07:00:00Z',
+            previewUrl: 'https://example.com/preview.mp3',
+        },
+    ],
+};
+
+const MOCK_ARTIST_SEARCH = {
+    results: [{
+        wrapperType: 'artist',
+        artistId: 77777,
+        artistName: 'Queen',
+    }],
+};
+
 const MOCK_ITUNES_RESULT = {
     results: [{
         trackName: 'Bohemian Rhapsody',
@@ -20,15 +54,19 @@ const MOCK_ITUNES_NO_PREVIEW = {
     }],
 };
 
+// Extracts the JSONP callback name from the URL and wraps the payload.
+function itunesFulfill(route, payload) {
+    const cb = (route.request().url().match(/[?&]callback=([^&]+)/) ?? [])[1] ?? '_cb';
+    return route.fulfill({
+        status: 200,
+        contentType: 'application/javascript',
+        body: `${cb}(${JSON.stringify(payload)})`,
+    });
+}
+
 test.describe('Card Generator', () => {
     test.beforeEach(async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', route =>
-            route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify(MOCK_ITUNES_RESULT),
-            })
-        );
+        await page.route('**/itunes.apple.com/search**', route => itunesFulfill(route, MOCK_ITUNES_RESULT));
     });
 
     test('loads with correct initial state', async ({ page }) => {
@@ -104,13 +142,7 @@ test.describe('Card Generator', () => {
     });
 
     test('no-preview track shows warning badge and hides generate button', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', route =>
-            route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify(MOCK_ITUNES_NO_PREVIEW),
-            })
-        );
+        await page.route('**/itunes.apple.com/search**', route => itunesFulfill(route, MOCK_ITUNES_NO_PREVIEW));
 
         await page.goto('/card-generator.html');
         await page.fill('#track-input', 'Obscure Track - Unknown Artist');
@@ -146,5 +178,111 @@ test.describe('Card Generator', () => {
 
         await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('#track-tbody tr')).toHaveCount(3);
+    });
+
+    // ── Deezer playlist import ──────────────────────────────────────────────────
+
+    test('imports Deezer playlist and renders tracks', async ({ page }) => {
+        await page.route('**/api.deezer.com/**', async route => {
+            const cb = (route.request().url().match(/callback=([^&]+)/) ?? [])[1] ?? 'cb';
+            await route.fulfill({
+                contentType: 'application/javascript',
+                body: `${cb}(${JSON.stringify({ data: [{ title: 'Bohemian Rhapsody', artist: { name: 'Queen' } }], next: null })})`,
+            });
+        });
+
+        await page.goto('/card-generator.html');
+        await page.fill('#playlist-url-input', 'https://www.deezer.com/playlist/123456');
+        await page.click('#playlist-import-btn');
+
+        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('#track-tbody tr')).toHaveCount(1);
+        await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
+    });
+
+    test('shows error for invalid Deezer URL', async ({ page }) => {
+        await page.goto('/card-generator.html');
+        await page.fill('#playlist-url-input', 'https://www.example.com/not-a-playlist');
+        await page.click('#playlist-import-btn');
+        await expect(page.locator('#status-message')).toContainText('not recognised');
+    });
+
+    test('shows error when Deezer URL input is empty', async ({ page }) => {
+        await page.goto('/card-generator.html');
+        await page.click('#playlist-import-btn');
+        await expect(page.locator('#status-message')).toContainText('Paste a Deezer playlist URL first');
+    });
+
+    test('Deezer import triggered by Enter key', async ({ page }) => {
+        await page.goto('/card-generator.html');
+        await page.fill('#playlist-url-input', 'https://www.example.com/not-a-playlist');
+        await page.press('#playlist-url-input', 'Enter');
+        await expect(page.locator('#status-message')).toContainText('not recognised');
+    });
+
+    // ── iTunes direct search (album / artist tabs) ──────────────────────────────
+
+    test('iTunes album search renders result cards', async ({ page }) => {
+        await page.route('**/itunes.apple.com/search**', async route => {
+            const url = route.request().url();
+            const body = url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT;
+            await itunesFulfill(route, body);
+        });
+
+        await page.goto('/card-generator.html');
+        await page.fill('#itunes-search-input', 'Queen');
+        await page.click('#itunes-search-btn');
+
+        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.result-name')).toContainText('A Night at the Opera');
+        await expect(page.locator('.result-sub')).toContainText('Queen');
+    });
+
+    test('clicking iTunes album result imports tracks', async ({ page }) => {
+        await page.route('**/itunes.apple.com/search**', async route => {
+            const url = route.request().url();
+            await itunesFulfill(route, url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT);
+        });
+        await page.route('**/itunes.apple.com/lookup**', async route => {
+            await itunesFulfill(route, MOCK_ALBUM_TRACKS);
+        });
+
+        await page.goto('/card-generator.html');
+        await page.fill('#itunes-search-input', 'Queen');
+        await page.click('#itunes-search-btn');
+        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
+        await page.locator('.result-card').first().click();
+
+        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('#track-tbody tr')).toHaveCount(1);
+        await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
+    });
+
+    test('iTunes search triggered by Enter key', async ({ page }) => {
+        await page.route('**/itunes.apple.com/search**', async route => {
+            const url = route.request().url();
+            await itunesFulfill(route, url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT);
+        });
+
+        await page.goto('/card-generator.html');
+        await page.fill('#itunes-search-input', 'Queen');
+        await page.press('#itunes-search-input', 'Enter');
+        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('iTunes artist tab search renders artist results', async ({ page }) => {
+        await page.route('**/itunes.apple.com/search**', async route => {
+            const url = route.request().url();
+            await itunesFulfill(route, url.includes('entity=musicArtist') ? MOCK_ARTIST_SEARCH : MOCK_ITUNES_RESULT);
+        });
+
+        await page.goto('/card-generator.html');
+        await page.click('[data-tab="artist"]');
+        await page.fill('#itunes-search-input', 'Queen');
+        await page.click('#itunes-search-btn');
+
+        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.result-name')).toContainText('Queen');
+        await expect(page.locator('.result-sub')).toContainText('Artist');
     });
 });

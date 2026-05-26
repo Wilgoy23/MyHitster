@@ -62,7 +62,7 @@ test.describe('Card Generator', () => {
         await expect(page.locator('#track-tbody tr')).toHaveCount(1);
         await expect(page.locator('#track-tbody')).toContainText('Queen');
         await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
-        await expect(page.locator('#track-tbody')).toContainText('1975');
+        await expect(page.locator('.year-input')).toHaveValue('1975');
         await expect(page.locator('#generate-btn')).toBeVisible();
     });
 

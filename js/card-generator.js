@@ -233,6 +233,8 @@ async function searchItunesForTracks(trackList) {
     if (noPreview > 0) msg += ` ${noPreview} have no preview.`;
     showStatus(msg, notFound > 0 ? 'warning' : 'success');
     renderTrackList();
+
+    await autoFixUnknownYears();
 }
 
 // ── iTunes album / artist search ─────────────────────────────────────────────
@@ -493,6 +495,41 @@ function escHtml(str) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// ── Auto-fix unknown years via MusicBrainz ────────────────────────────────────
+
+async function autoFixUnknownYears() {
+    const unknown = tracks
+        .map((t, i) => ({ t, i }))
+        .filter(({ t }) => t.year === 'Unknown' && !t.notFound);
+
+    if (!unknown.length) return;
+
+    setLoading(true, `Looking up ${unknown.length} unknown release date(s) via MusicBrainz…`);
+    let updated = 0;
+
+    for (let j = 0; j < unknown.length; j++) {
+        const { t, i } = unknown[j];
+        updateStatus(`Looking up year ${j + 1}/${unknown.length}: ${t.artist} – ${t.name}`);
+
+        try {
+            const year = await queryMusicBrainz(t.artist, t.name);
+            if (year) { tracks[i].year = year; updated++; }
+        } catch (e) {
+            console.warn('MusicBrainz lookup failed:', e);
+        }
+
+        if (j < unknown.length - 1) await sleep(1100);
+    }
+
+    setLoading(false);
+    if (updated > 0) {
+        showStatus(`${updated} of ${unknown.length} unknown year(s) resolved.`, 'success');
+        renderTrackList();
+    } else if (unknown.length > 0) {
+        showStatus(`Could not determine year for ${unknown.length} track(s) — edit manually.`, 'warning');
+    }
+}
+
 // ── MusicBrainz date verification ─────────────────────────────────────────────
 
 const CLASSIC_ARTISTS = [
@@ -548,8 +585,9 @@ async function verifyWithMusicBrainz() {
 
 async function queryMusicBrainz(artist, title) {
     const clean = title.split('(')[0].split('[')[0].trim();
-    const query = encodeURIComponent(`recording:${clean} AND artist:${artist}`);
-    const url   = `https://musicbrainz.org/ws/2/recording/?query=${query}&fmt=json&limit=10`;
+    // Quote terms so multi-word phrases aren't split by Lucene
+    const query = `recording:"${clean}" AND artist:"${artist}"`;
+    const url   = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=10`;
 
     const resp = await fetch(url, {
         headers: { 'User-Agent': 'MyHitster/1.0 (github.com/wilgoy23/MyHitster)' }
@@ -561,6 +599,11 @@ async function queryMusicBrainz(artist, title) {
 
     let earliest = null;
     for (const rec of data.recordings) {
+        // first-release-date is the most reliable field on the recording itself
+        if (rec['first-release-date']) {
+            const y = parseInt(rec['first-release-date'].split('-')[0]);
+            if (!isNaN(y) && (earliest === null || y < earliest)) earliest = y;
+        }
         for (const rel of (rec.releases || [])) {
             if (rel.date) {
                 const y = parseInt(rel.date.split('-')[0]);

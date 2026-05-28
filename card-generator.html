@@ -1,13 +1,19 @@
 <!doctype html>
-<html>
+<html data-theme="dark">
   <head>
     <title>Hitster Card Generator</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/shared.css" />
     <link rel="stylesheet" href="css/card-generator.css" />
   </head>
   <body>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">☀</button>
+
     <div class="container">
       <a class="back-link" href="index.html">&#8592; Back to player</a>
       <h1>Card Generator</h1>
@@ -17,74 +23,83 @@
       <div class="panel">
         <h2>1 &mdash; Get your tracks</h2>
 
-        <!-- ── Option A: Playlist URL ── -->
-        <p class="section-label">Paste a playlist URL</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 10px">Works with public Deezer playlists. Each track is matched to an iTunes 30-second preview.</p>
-        <div class="input-row">
-          <input type="text" id="playlist-url-input" placeholder="https://www.deezer.com/playlist/…" />
-          <button class="btn" id="playlist-import-btn">Import</button>
+        <!-- ── Import source tabs ── -->
+        <div class="import-tabbar">
+          <button class="import-tab active" data-import="playlist">Playlist URL</button>
+          <button class="import-tab" data-import="itunes">iTunes Search</button>
+          <button class="import-tab" data-import="paste">Paste / Upload</button>
         </div>
 
-        <div class="or-divider">— or search iTunes for an album / artist —</div>
-
-        <!-- ── Option B: iTunes direct search ── -->
-        <p class="section-label">Search iTunes</p>
-        <div class="search-tab-row">
-          <button class="tab-btn active" data-tab="album">Album</button>
-          <button class="tab-btn" data-tab="artist">Artist</button>
-        </div>
-        <div class="input-row" style="margin:10px 0 0">
-          <input type="text" id="itunes-search-input" placeholder="e.g. Abbey Road, Dark Side of the Moon…" />
-          <button class="btn" id="itunes-search-btn">Search</button>
-        </div>
-        <div id="itunes-results" class="itunes-results"></div>
-
-        <div class="or-divider">— or import from a playlist file —</div>
-
-        <!-- ── Option C: Exportify / CSV / paste ── -->
-        <div class="exportify-box">
-          <div class="exportify-steps">
-            <span class="step-num">1</span>
-            <span>Open <a href="https://exportify.net" target="_blank" rel="noopener">exportify.net</a> and connect your Spotify there</span>
-            <span class="step-num">2</span>
-            <span>Click <strong>Export</strong> next to your playlist &mdash; downloads a CSV</span>
-            <span class="step-num">3</span>
-            <span>Upload that CSV below &mdash; no account needed here</span>
+        <!-- ── Tab A: Playlist URL ── -->
+        <div class="import-panel active" id="import-panel-playlist">
+          <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Works with public Deezer playlists. Each track is matched to an iTunes 30-second preview.</p>
+          <div class="input-row">
+            <input type="text" id="playlist-url-input" placeholder="https://www.deezer.com/playlist/…" />
+            <button class="btn" id="playlist-import-btn">Import</button>
           </div>
-          <a class="btn btn-green exportify-btn" href="https://exportify.net" target="_blank" rel="noopener">
-            Open Exportify &#8599;
-          </a>
+          <p id="url-input-feedback" class="url-feedback"></p>
         </div>
 
-        <div class="upload-row">
-          <label class="btn upload-label" for="csv-upload">&#8593; Upload CSV</label>
-          <input type="file" id="csv-upload" accept=".csv,.txt,.tsv" style="display:none" />
-          <span class="upload-hint">drag &amp; drop onto the text area also works</span>
+        <!-- ── Tab B: iTunes direct search ── -->
+        <div class="import-panel" id="import-panel-itunes">
+          <div class="search-tab-row">
+            <button class="tab-btn active" data-tab="album">Album</button>
+            <button class="tab-btn" data-tab="artist">Artist</button>
+          </div>
+          <div class="input-row" style="margin:10px 0 0">
+            <input type="text" id="itunes-search-input" placeholder="e.g. Abbey Road, Dark Side of the Moon…" />
+            <button class="btn" id="itunes-search-btn">Search</button>
+          </div>
+          <div id="itunes-results" class="itunes-results"></div>
         </div>
 
-        <details class="manual-toggle">
-          <summary>Or paste tracks manually</summary>
-          <p style="font-size:12px;color:#aaa;margin:8px 0">
-            One per line &mdash; <code>Artist - Title</code>. Also accepts Spotify desktop copy (select all tracks → Ctrl+C → paste).
-          </p>
-        </details>
+        <!-- ── Tab C: Paste / Upload ── -->
+        <div class="import-panel" id="import-panel-paste">
+          <div class="exportify-box">
+            <div class="exportify-steps">
+              <span class="step-num">1</span>
+              <span>Open <a href="https://exportify.net" target="_blank" rel="noopener">exportify.net</a> and connect your Spotify there</span>
+              <span class="step-num">2</span>
+              <span>Click <strong>Export</strong> next to your playlist &mdash; downloads a CSV</span>
+              <span class="step-num">3</span>
+              <span>Upload that CSV below &mdash; no account needed here</span>
+            </div>
+            <a class="btn btn-green exportify-btn" href="https://exportify.net" target="_blank" rel="noopener">
+              Open Exportify &#8599;
+            </a>
+          </div>
 
-        <textarea
-          id="track-input"
-          placeholder="Paste CSV content or tracks here&#10;&#10;Queen - Bohemian Rhapsody&#10;ABBA - Dancing Queen&#10;Michael Jackson - Thriller"
-          rows="8"
-        ></textarea>
+          <div class="upload-row">
+            <label class="btn upload-label" for="csv-upload">&#8593; Upload CSV</label>
+            <input type="file" id="csv-upload" accept=".csv,.txt,.tsv" style="display:none" />
+            <span class="upload-hint">drag &amp; drop onto the text area also works</span>
+          </div>
 
-        <div style="margin-top:10px">
-          <button class="btn" id="search-btn">Search iTunes</button>
+          <details class="manual-toggle">
+            <summary>Or paste tracks manually</summary>
+            <p style="font-size:12px;color:var(--text-muted);margin:8px 0">
+              One per line &mdash; <code>Artist - Title</code>. Also accepts Spotify desktop copy (select all tracks → Ctrl+C → paste).
+            </p>
+          </details>
+
+          <textarea
+            id="track-input"
+            placeholder="Paste CSV content or tracks here&#10;&#10;Queen - Bohemian Rhapsody&#10;ABBA - Dancing Queen&#10;Michael Jackson - Thriller"
+            rows="8"
+          ></textarea>
+
+          <div style="margin-top:10px">
+            <button class="btn" id="search-btn">Search iTunes</button>
+          </div>
         </div>
+
         <p id="status-message" class="status"></p>
       </div>
 
       <!-- ── Step 2: Year range filter ── -->
-      <div class="panel">
-        <h2>2 &mdash; Year range (optional)</h2>
-        <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+      <details class="panel panel-collapsible" id="panel-year-filter">
+        <summary><h2>2 &mdash; Year range <span class="optional-tag">optional</span></h2></summary>
+        <p style="font-size:13px;color:var(--text-muted);margin:12px 0">
           Tracks outside this range are highlighted so you can review and correct their year.
         </p>
         <div class="options-row">
@@ -98,12 +113,13 @@
           </div>
           <button class="btn btn-secondary" id="year-filter-apply">Apply filter</button>
         </div>
-      </div>
+        <p id="year-range-feedback" class="url-feedback" style="margin-top:8px"></p>
+      </details>
 
       <!-- ── Step 3: MusicBrainz verification ── -->
-      <div class="panel">
-        <h2>3 &mdash; Verify release dates (optional)</h2>
-        <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+      <details class="panel panel-collapsible" id="panel-verify">
+        <summary><h2>3 &mdash; Verify release dates <span class="optional-tag">optional</span></h2></summary>
+        <p style="font-size:13px;color:var(--text-muted);margin:12px 0">
           Cross-checks suspicious dates against MusicBrainz. Rate-limited to one request per second.
         </p>
         <div class="mb-row">
@@ -113,7 +129,7 @@
           </div>
           <button class="btn btn-secondary" id="verify-btn">Verify dates</button>
         </div>
-      </div>
+      </details>
 
       <!-- ── Loading indicator ── -->
       <div id="loading-section">
@@ -121,13 +137,14 @@
           <div class="spinner"></div>
           <p id="loading-message">Loading…</p>
         </div>
+        <div id="loading-progress-wrap"><div id="loading-bar"></div></div>
       </div>
 
       <!-- ── Track list ── -->
       <div id="track-list-section">
         <div class="panel">
           <h2>Track list</h2>
-          <p style="font-size:12px;color:#666;margin:0 0 10px">
+          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px">
             Yellow = outside year range &nbsp;|&nbsp;
             Orange = no preview available (excluded from PDF) &nbsp;|&nbsp;
             Red = not found on iTunes
@@ -159,7 +176,7 @@
         <!-- ── Step 4: Generate ── -->
         <div class="panel">
           <h2>4 &mdash; Generate PDF</h2>
-          <p style="font-size:13px;color:#aaa;margin:0 0 12px">
+          <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">
             Double-sided layout: QR codes on the front, artist &amp; year on the back.<br>
             Print with <strong>"Flip on short edge"</strong> for correct alignment.
           </p>
@@ -241,6 +258,8 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/ux.js"></script>
     <script type="module" src="js/card-generator.js"></script>
   </body>
 </html>

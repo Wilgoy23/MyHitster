@@ -54,12 +54,18 @@ function startScanner() {
     });
 }
 
-/* Stops the camera and hides the scanner overlay. */
+/* Stops the camera and hides the scanner overlay with a fade. */
 function stopScanner() {
     scannerActive = false;
 
     const container = document.getElementById('scanner-container');
-    if (container) container.style.display = 'none';
+    if (container) {
+        container.classList.add('scanner-closing');
+        setTimeout(() => {
+            container.style.display = 'none';
+            container.classList.remove('scanner-closing');
+        }, 300);
+    }
 
     const video = document.getElementById('qr-video');
     if (video?.srcObject) {
@@ -95,6 +101,12 @@ function scanTick() {
                 if (container) {
                     container.classList.add('scan-success-flash');
                     setTimeout(() => container.classList.remove('scan-success-flash'), 500);
+                }
+
+                const overlay = document.getElementById('scan-found-overlay');
+                if (overlay) {
+                    overlay.classList.add('visible');
+                    setTimeout(() => overlay.classList.remove('visible'), 1200);
                 }
 
                 processScannedUrl(code.data);

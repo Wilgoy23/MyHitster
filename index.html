@@ -1,14 +1,20 @@
 <!doctype html>
-<html>
+<html data-theme="dark">
   <head>
     <title>Mystery Music Player</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <link rel="stylesheet" href="css/shared.css" />
     <link rel="stylesheet" href="css/index.css" />
   </head>
   <body>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">☀</button>
+
     <div class="container">
       <h1>Mystery Music</h1>
       <p id="status-message">Scan a QR code to load a track</p>
@@ -41,6 +47,7 @@
       <div id="video-container">
         <video id="qr-video" playsinline></video>
         <div id="scan-overlay"></div>
+        <div id="scan-found-overlay"><span class="found-text">&#10003; Found</span></div>
       </div>
       <p id="scanner-status">Position QR code in the frame</p>
       <button id="close-scanner">Cancel</button>
@@ -52,6 +59,7 @@
       <a href="card-generator.html">Card Generator</a>
     </footer>
 
+    <script src="js/theme.js"></script>
     <script src="js/player.js"></script>
     <script src="js/scanner.js"></script>
     <script>

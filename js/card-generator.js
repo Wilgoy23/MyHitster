@@ -135,13 +135,14 @@ async function finishImport(baseMsg) {
     await autoFixUnknownYears();
 }
 
-// For tracks that the iTunes lookup returned without a previewUrl, run a
+// For tracks that the Deezer lookup returned without a previewUrl, run a
 // targeted search to find a version that does have one.
 async function fillMissingPreviews() {
     const missing = tracks.map((t, i) => ({ t, i })).filter(({ t }) => !t.previewUrl && !t.notFound);
     if (!missing.length) return;
 
     setLoading(true, `Finding previews for ${missing.length} track(s)…`);
+    updateStatus(`Searching previews for ${missing.length} track(s)…`);
 
     for (let j = 0; j < missing.length; j++) {
         const { t, i } = missing[j];
@@ -190,7 +191,7 @@ async function searchItunesForTracks(trackList) {
     tracks = [];
     document.getElementById('track-list-section').style.display = 'none';
     document.getElementById('generate-btn').style.display = 'none';
-    setLoading(true, `Searching iTunes… (0 / ${trackList.length})`);
+    setLoading(true, `Searching… (0 / ${trackList.length})`);
 
     let notFound = 0, noPreview = 0;
     for (let i = 0; i < trackList.length; i++) {
@@ -247,7 +248,7 @@ async function autoFixUnknownYears() {
     if (updated > 0) {
         showStatus(`${updated} of ${unknown.length} unknown year(s) resolved.`, 'success');
         renderTrackList();
-    } else {
+    } else if (unknown.length > 0) {
         showStatus(`Could not determine year for ${unknown.length} track(s) — edit manually.`, 'warning');
     }
 }

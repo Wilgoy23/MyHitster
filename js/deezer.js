@@ -22,7 +22,11 @@ export async function fetchDeezerPlaylistTracks(playlistId) {
 
         for (const track of (page.data || [])) {
             if (track.title && track.artist?.name) {
-                trackList.push({ artist: track.artist.name, title: track.title });
+                trackList.push({
+                    artist:     track.artist.name,
+                    title:      track.title,
+                    previewUrl: track.preview || null,
+                });
             }
         }
         if (!page.next) break;

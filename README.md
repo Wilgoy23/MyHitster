@@ -36,12 +36,28 @@ A browser-based music guessing game inspired by Hitster. Scan a QR code to hear 
 │   ├── index.css
 │   └── card-generator.css
 ├── js/
-│   ├── player.js           Audio playback via iTunes preview URLs
-│   ├── scanner.js          QR code scanning via jsQR
-│   └── card-generator.js   Playlist import, iTunes search, PDF generation
+│   ├── api/
+│   │   ├── deezer.js           Deezer playlist fetching
+│   │   ├── itunes.js           iTunes search and preview matching
+│   │   └── musicbrainz.js      MusicBrainz release-date lookup
+│   ├── backend/
+│   │   ├── supabase.js         Supabase client singleton (null when unconfigured)
+│   │   ├── auth.js             Auth widget and state (optional)
+│   │   ├── decks.js            Deck save/load/share (optional)
+│   │   └── config.example.js   Template — copy to config.js and fill in credentials
+│   ├── core/
+│   │   ├── card-generator.js   Orchestrates deck building and UI
+│   │   ├── player.js           Audio playback via iTunes preview URLs
+│   │   ├── scanner.js          QR code scanning via jsQR
+│   │   ├── parser.js           CSV and manual track-list parsing
+│   │   └── pdf.js              PDF generation (returns blob + triggers download)
+│   └── ui/
+│       ├── theme.js            Dark/light theme toggle
+│       └── ux.js               Shared UI helpers
 └── tests/
     ├── player.spec.js
-    └── generator.spec.js
+    ├── generator.spec.js
+    └── auth.spec.js
 ```
 
 ## QR code format

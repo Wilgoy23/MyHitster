@@ -1,17 +1,17 @@
 import { parseInput }                                          from './parser.js';
 import { searchItunes, searchItunesEntities,
-         fetchAlbumTracks, fetchArtistTracks, cleanSongTitle } from './itunes.js';
-import { fetchDeezerPlaylistTracks }                           from './deezer.js';
-import { queryMusicBrainz }                                    from './musicbrainz.js';
+         fetchAlbumTracks, fetchArtistTracks, cleanSongTitle } from '../api/itunes.js';
+import { fetchDeezerPlaylistTracks }                           from '../api/deezer.js';
+import { queryMusicBrainz }                                    from '../api/musicbrainz.js';
 import { generatePDF }                                         from './pdf.js';
-import { isConfigured }                                        from './supabase.js';
-import { getUser, onAuthStateChange }                          from './auth.js';
+import { isConfigured }                                        from '../backend/supabase.js';
+import { getUser, onAuthStateChange }                          from '../backend/auth.js';
 import {
     saveDeck, getDeckByShareToken, uploadPdf,
     setDeckPublic, setOnLoadDeck,
     getCurrentDeckId, getCurrentShareToken, setCurrentDeck,
     buildShareUrl,
-} from './decks.js';
+} from '../backend/decks.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 

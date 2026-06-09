@@ -158,11 +158,9 @@
 
 .loading { margin: 40px auto; text-align: center; }
 
-/* ── Auth widget (fixed top-right) ────────────────────── */
+/* ── Auth widget (inline in top-bar-right) ────────────── */
 .auth-widget {
-    position: fixed;
-    top: 11px; right: 18px;
-    z-index: 900;
+    position: relative;
 }
 
 .auth-signin-btn {
@@ -471,4 +469,19 @@
     font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.06em;
     color: var(--success);
+}
+
+/* ── Responsive ── */
+@media (max-width: 599px) {
+    .auth-signin-btn { padding: 6px 10px; font-size: 9px; }
+
+    /* Prevent dropdown from clipping off the right edge on narrow viewports */
+    .auth-dropdown { right: 0; min-width: 180px; }
+
+    /* Keep theme panel on-screen */
+    .theme-panel { right: 0; min-width: 160px; }
+
+    /* My Decks panel full-width on mobile */
+    .my-decks-panel { width: 100%; max-width: 100vw; right: -100%; }
+    .my-decks-panel.open { right: 0; }
 }

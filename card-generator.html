@@ -24,17 +24,23 @@
 
     <!-- Top bar -->
     <div class="top-bar">
-      <a class="top-bar-logo" href="index.html">
-        <div class="logo-mark">H</div>
-        <span class="logo-text">MyHitster</span>
-      </a>
+      <div class="top-bar-left">
+        <a class="top-bar-logo" href="index.html">
+          <div class="logo-mark">H</div>
+          <span class="logo-text">MyHitster</span>
+        </a>
+        <nav class="top-bar-nav" aria-label="Pages">
+          <a class="nav-link" href="index.html">Player</a>
+          <a class="nav-link active" href="card-generator.html">Generator</a>
+        </nav>
+      </div>
       <div class="top-bar-right">
+        <div id="auth-widget" class="auth-widget"></div>
         <button id="theme-toggle" class="theme-toggle icon-btn" aria-label="Toggle theme">☀</button>
       </div>
     </div>
 
     <div class="container">
-      <a class="back-link" href="index.html">&#8592; Back to player</a>
       <h1>Card Generator</h1>
       <p>Generate a printable PDF deck from a list of songs. No account required.</p>
 
@@ -218,9 +224,6 @@
         <a href="https://wilgoy23.github.io/MyHitster/">MyHitster</a> | Card Generator
       </footer>
     </div>
-
-    <!-- ── Auth widget (top-right, filled by auth.js) ── -->
-    <div id="auth-widget" class="auth-widget"></div>
 
     <!-- ── Auth modal ── -->
     <div id="auth-modal" class="auth-modal-overlay" style="display:none">

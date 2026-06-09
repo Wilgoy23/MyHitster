@@ -58,12 +58,13 @@ function _renderWidget(user) {
 
     if (user) {
         const initial = (user.email || '?')[0].toUpperCase();
+        const hasDecksPanel = !!document.getElementById('my-decks-panel');
         widget.innerHTML = `
             <button class="auth-avatar" id="auth-avatar-btn" aria-haspopup="true" aria-expanded="false"
                     title="${_esc(user.email || '')}">${_esc(initial)}</button>
             <div class="auth-dropdown" id="auth-dropdown" role="menu">
                 <div class="auth-dropdown-email">${_esc(user.email || '')}</div>
-                <button class="auth-dropdown-item" id="auth-my-decks-btn" role="menuitem">My Decks</button>
+                ${hasDecksPanel ? `<button class="auth-dropdown-item" id="auth-my-decks-btn" role="menuitem">My Decks</button>` : ''}
                 <button class="auth-dropdown-item auth-dropdown-item--danger" id="auth-signout-btn" role="menuitem">Sign out</button>
             </div>`;
 
@@ -77,7 +78,7 @@ function _renderWidget(user) {
             document.getElementById('auth-dropdown').classList.remove('open');
             signOut().catch(console.error);
         });
-        document.getElementById('auth-my-decks-btn').addEventListener('click', () => {
+        document.getElementById('auth-my-decks-btn')?.addEventListener('click', () => {
             document.getElementById('auth-dropdown').classList.remove('open');
             window.dispatchEvent(new CustomEvent('auth:show-decks'));
         });

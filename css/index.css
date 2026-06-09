@@ -511,3 +511,19 @@ footer a:hover { color: var(--accent); }
     padding: 10px; margin: 20px 0;
     text-align: left; font-size: 14px; display: none;
 }
+
+/* =====================
+   Responsive
+   ===================== */
+@media (max-width: 599px) {
+    .mystery-card { width: 180px; height: 180px; }
+    .mystery-q { font-size: 64px; }
+    .mystery-sublabel { font-size: 8px; }
+    .app-layout { padding: 68px 16px 54px; }
+    .progress-section { max-width: 260px; }
+    #play-button { width: 68px; height: 68px; margin-bottom: 28px; }
+    #scan-button { padding: 12px 24px; font-size: 10px; }
+
+    /* Footer tighter on small screens */
+    footer { height: 32px; font-size: 8px; gap: 10px; }
+}

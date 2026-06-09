@@ -572,9 +572,27 @@ footer a:hover { color: var(--accent); }
    Responsive
    ===================== */
 @media (max-width: 600px) {
+    .container { padding: 68px 16px 40px; }
+    h1 { font-size: 22px; }
+
     .input-row, .options-row, .mb-row { flex-direction: column; align-items: stretch; }
     .option-group input[type="number"],
     .option-group input[type="text"] { width: 100%; }
+
     .import-tabbar { width: 100%; }
-    .import-tab { flex: 1; text-align: center; }
+    .import-tab { flex: 1; text-align: center; padding: 8px 10px; }
+
+    .panel-body { padding: 16px; }
+    details.panel-collapsible > summary + * { padding: 16px; }
+
+    .exportify-box { flex-direction: column; gap: 12px; }
+    .exportify-steps { font-size: 12px; }
+
+    /* Table scrolls horizontally rather than overflowing */
+    .table-wrapper { font-size: 12px; }
+
+    .search-tab-row { width: 100%; }
+    .tab-btn { flex: 1; text-align: center; }
+
+    footer { margin-top: 24px; padding-top: 12px; }
 }

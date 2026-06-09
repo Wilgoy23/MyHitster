@@ -83,11 +83,38 @@ code {
     letter-spacing: 0.14em;
 }
 
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.top-bar-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.nav-link {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 5px 10px;
+    border: 2px solid transparent;
+    border-radius: 2px;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.nav-link:hover { color: var(--text); }
+.nav-link.active { color: var(--accent); border-color: var(--border); }
+
 .top-bar-right {
     display: flex;
     align-items: center;
     gap: 8px;
-    position: relative; /* anchor for theme panel */
+    position: relative; /* anchor for theme panel + auth dropdown */
 }
 
 /* ── Footer fallback (pages may override) ── */
@@ -111,3 +138,11 @@ footer a:hover { color: var(--accent); }
 
 /* ── Utility ── */
 .error { color: var(--error); margin: 20px 0; }
+
+/* ── Responsive ── */
+@media (max-width: 599px) {
+    .top-bar { padding: 0 12px; }
+    .top-bar-left { gap: 12px; }
+    .logo-text { display: none; }
+    .nav-link { padding: 5px 8px; letter-spacing: 0.08em; }
+}

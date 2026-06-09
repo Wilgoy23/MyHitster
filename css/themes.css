@@ -1,0 +1,175 @@
+/* ======================================================
+   themes.css — Design token definitions per theme
+   Each block only contains custom property values.
+   Component and layout styles live in components.css
+   and the page-specific CSS files.
+
+   Available themes:
+     neon       — deep navy + electric cyan  (default)
+     classic    — near-black + amber gold
+     retro      — warm brown + orange
+     mono       — pure black + white
+     synthwave  — dark purple + hot pink
+   ====================================================== */
+
+/* ── NEON (default) ─────────────────────────────────── */
+:root,
+[data-theme="neon"] {
+    --bg:               #060d1b;
+    --surface:          #0c1629;
+    --surface-raised:   #162035;
+    --border:           #1e3054;
+    --border-bright:    #2d4a7a;
+
+    --accent:           #00d4ff;
+    --accent-hover:     #00b8e0;
+    --accent-dim:       rgba(0, 212, 255, 0.12);
+    --accent-glow:      rgba(0, 212, 255, 0.35);
+    --accent-glow-sm:   rgba(0, 212, 255, 0.18);
+    --accent-text:      #060d1b;
+    --accent-rgb:       0, 212, 255;
+
+    --text:             #ddeeff;
+    --text-muted:       #4a7fa0;
+    --text-dim:         #1e3a54;
+
+    --error:            #ff4d6d;
+    --success:          #00ff9d;
+    --warning:          #ffb300;
+
+    --font:             'Space Grotesk', system-ui, sans-serif;
+
+    /* Semitransparent bg overlays (top-bar, footer, scanner, modals) */
+    --bg-overlay:       rgba(6,  13, 27, 0.90);
+    --bg-overlay-heavy: rgba(6,  13, 27, 0.97);
+    --bg-overlay-modal: rgba(6,  13, 27, 0.85);
+    --bg-overlay-scan:  rgba(6,  13, 27, 0.55);
+}
+
+/* ── CLASSIC (near-black + amber gold) ──────────────── */
+[data-theme="classic"] {
+    --bg:               #0c0c0c;
+    --surface:          #161616;
+    --surface-raised:   #1f1f1f;
+    --border:           #2d2d2d;
+    --border-bright:    #484848;
+
+    --accent:           #f59e0b;
+    --accent-hover:     #d97706;
+    --accent-dim:       rgba(245, 158, 11, 0.12);
+    --accent-glow:      rgba(245, 158, 11, 0.35);
+    --accent-glow-sm:   rgba(245, 158, 11, 0.18);
+    --accent-text:      #0c0c0c;
+    --accent-rgb:       245, 158, 11;
+
+    --text:             #f5f0e8;
+    --text-muted:       #888877;
+    --text-dim:         #3a3a30;
+
+    --error:            #ef4444;
+    --success:          #22c55e;
+    --warning:          #f59e0b;
+
+    --font:             'Space Grotesk', system-ui, sans-serif;
+
+    --bg-overlay:       rgba(12, 12, 12, 0.90);
+    --bg-overlay-heavy: rgba(12, 12, 12, 0.97);
+    --bg-overlay-modal: rgba(12, 12, 12, 0.85);
+    --bg-overlay-scan:  rgba(12, 12, 12, 0.55);
+}
+
+/* ── RETRO (warm brown + orange — vinyl aesthetic) ───── */
+[data-theme="retro"] {
+    --bg:               #1c0f07;
+    --surface:          #291708;
+    --surface-raised:   #3a210e;
+    --border:           #4e3018;
+    --border-bright:    #7a5025;
+
+    --accent:           #e05c25;
+    --accent-hover:     #c44d1c;
+    --accent-dim:       rgba(224, 92, 37, 0.12);
+    --accent-glow:      rgba(224, 92, 37, 0.35);
+    --accent-glow-sm:   rgba(224, 92, 37, 0.18);
+    --accent-text:      #fff8f0;
+    --accent-rgb:       224, 92, 37;
+
+    --text:             #f2dfc0;
+    --text-muted:       #a07050;
+    --text-dim:         #4e3018;
+
+    --error:            #cc3333;
+    --success:          #7ab848;
+    --warning:          #cc8822;
+
+    --font:             'Space Grotesk', system-ui, sans-serif;
+
+    --bg-overlay:       rgba(28, 15,  7, 0.90);
+    --bg-overlay-heavy: rgba(28, 15,  7, 0.97);
+    --bg-overlay-modal: rgba(28, 15,  7, 0.85);
+    --bg-overlay-scan:  rgba(28, 15,  7, 0.55);
+}
+
+/* ── MONO (pure black + white) ───────────────────────── */
+[data-theme="mono"] {
+    --bg:               #080808;
+    --surface:          #111111;
+    --surface-raised:   #1c1c1c;
+    --border:           #2a2a2a;
+    --border-bright:    #484848;
+
+    --accent:           #e0e0e0;
+    --accent-hover:     #c0c0c0;
+    --accent-dim:       rgba(224, 224, 224, 0.10);
+    --accent-glow:      rgba(224, 224, 224, 0.18);
+    --accent-glow-sm:   rgba(224, 224, 224, 0.10);
+    --accent-text:      #080808;
+    --accent-rgb:       224, 224, 224;
+
+    --text:             #e0e0e0;
+    --text-muted:       #666666;
+    --text-dim:         #2a2a2a;
+
+    --error:            #ff4444;
+    --success:          #44cc77;
+    --warning:          #ffaa00;
+
+    --font:             'Space Grotesk', system-ui, sans-serif;
+
+    --bg-overlay:       rgba(8,  8,  8, 0.90);
+    --bg-overlay-heavy: rgba(8,  8,  8, 0.97);
+    --bg-overlay-modal: rgba(8,  8,  8, 0.85);
+    --bg-overlay-scan:  rgba(8,  8,  8, 0.55);
+}
+
+/* ── SYNTHWAVE (deep purple + hot pink) ─────────────── */
+[data-theme="synthwave"] {
+    --bg:               #0d0014;
+    --surface:          #160020;
+    --surface-raised:   #220030;
+    --border:           #3d0060;
+    --border-bright:    #5e0090;
+
+    --accent:           #ff2d78;
+    --accent-hover:     #e0175e;
+    --accent-dim:       rgba(255, 45, 120, 0.12);
+    --accent-glow:      rgba(255, 45, 120, 0.40);
+    --accent-glow-sm:   rgba(255, 45, 120, 0.20);
+    --accent-text:      #0d0014;
+    --accent-rgb:       255, 45, 120;
+
+    --text:             #f0daff;
+    --text-muted:       #9060b8;
+    --text-dim:         #3d0060;
+
+    --error:            #ff4466;
+    --success:          #00ffaa;
+    --warning:          #ffcc00;
+
+    --font:             'Space Grotesk', system-ui, sans-serif;
+
+    --bg-overlay:       rgba(13,  0, 20, 0.90);
+    --bg-overlay-heavy: rgba(13,  0, 20, 0.97);
+    --bg-overlay-modal: rgba(13,  0, 20, 0.85);
+    --bg-overlay-scan:  rgba(13,  0, 20, 0.55);
+}

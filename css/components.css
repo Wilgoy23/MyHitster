@@ -1,0 +1,474 @@
+/* ======================================================
+   components.css — Reusable UI components
+   Uses CSS custom properties only — no hardcoded colors.
+   Theme tokens live in themes.css.
+   ====================================================== */
+
+/* ── Icon button (top-bar, inline) ───────────────────── */
+.icon-btn {
+    height: 32px; min-width: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font);
+    padding: 0 10px;
+    transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.icon-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow-sm);
+}
+
+/* ── Theme picker ─────────────────────────────────────── */
+#theme-toggle {
+    /* Placed inside .top-bar-right — never fixed */
+    position: static;
+}
+
+.theme-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    padding: 10px;
+    box-shadow: 4px 4px 0 var(--border);
+    z-index: 400;
+    min-width: 180px;
+}
+
+.theme-panel[hidden] { display: none; }
+
+.theme-swatches {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.theme-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: transparent;
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-align: left;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.theme-swatch:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.theme-swatch.active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.swatch-dot {
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+.button,
+.button-primary {
+    background-color: var(--accent);
+    color: var(--accent-text);
+    border: 2px solid var(--accent);
+    padding: 10px 20px;
+    border-radius: 2px;
+    font-size: 14px; font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.button:hover,
+.button-primary:hover {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 14px var(--accent-glow-sm);
+}
+
+.button:active,
+.button-primary:active { transform: translate(2px, 2px); }
+
+.button-alt {
+    background-color: transparent;
+    color: var(--text);
+    border: 2px solid var(--border-bright);
+}
+
+.button-alt:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background-color: transparent;
+    box-shadow: 0 0 10px var(--accent-glow-sm);
+}
+
+.button-spotify {
+    background-color: #1DB954;
+    color: white;
+    border: 2px solid #1DB954;
+    padding: 12px 30px;
+    border-radius: 2px;
+    font-weight: 700; font-family: var(--font); font-size: 14px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 40px auto; cursor: pointer; display: block;
+    transition: background 0.15s;
+}
+
+.button-spotify:hover { background-color: #17a349; }
+
+/* ── Spinner / loading ────────────────────────────────── */
+.spinner {
+    display: inline-block;
+    width: 36px; height: 36px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+    margin: 20px 0;
+    box-shadow: 0 0 10px var(--accent-glow-sm);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading { margin: 40px auto; text-align: center; }
+
+/* ── Auth widget (fixed top-right) ────────────────────── */
+.auth-widget {
+    position: fixed;
+    top: 11px; right: 18px;
+    z-index: 900;
+}
+
+.auth-signin-btn {
+    background: var(--accent);
+    border: 2px solid var(--accent);
+    color: var(--accent-text);
+    padding: 6px 14px;
+    border-radius: 2px;
+    font-size: 10px; font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-signin-btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 12px var(--accent-glow-sm);
+}
+
+.auth-avatar {
+    width: 32px; height: 32px;
+    border-radius: 2px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 800; font-size: 13px;
+    border: 2px solid var(--accent);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s;
+    font-family: var(--font);
+}
+
+.auth-avatar:hover { opacity: 0.85; }
+
+.auth-dropdown {
+    display: none;
+    position: absolute;
+    right: 0; top: calc(100% + 6px);
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    min-width: 200px; overflow: hidden;
+    box-shadow: 4px 4px 0 var(--border);
+}
+
+.auth-dropdown.open { display: block; }
+
+.auth-dropdown-email {
+    font-size: 11px; color: var(--text-muted);
+    padding: 10px 14px 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 1px solid var(--border);
+}
+
+.auth-dropdown-item {
+    display: block; width: 100%;
+    background: none; border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text); text-align: left;
+    padding: 9px 14px;
+    font-size: 11px; font-family: var(--font); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.auth-dropdown-item:last-child { border-bottom: none; }
+.auth-dropdown-item:hover { background: var(--surface-raised); color: var(--accent); }
+.auth-dropdown-item--danger { color: var(--error); }
+.auth-dropdown-item--danger:hover { background: var(--surface-raised); color: var(--error); }
+
+/* ── Auth modal ────────────────────────────────────────── */
+@keyframes auth-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes auth-slide-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--bg-overlay-modal);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    animation: auth-fade-in 0.18s ease;
+}
+
+.auth-modal-box {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    padding: 0; width: 100%; max-width: 400px;
+    margin: 16px; position: relative;
+    box-shadow: 6px 6px 0 var(--accent);
+    animation: auth-slide-up 0.22s cubic-bezier(.22,1,.36,1);
+    overflow: hidden;
+}
+
+.auth-modal-brand {
+    padding: 20px 24px 16px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+}
+
+.auth-modal-brand-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800;
+    color: var(--accent-text);
+    flex-shrink: 0;
+    box-shadow: 0 0 12px var(--accent-glow-sm);
+}
+
+.auth-modal-brand-name {
+    font-size: 15px; font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+.auth-modal-body { padding: 20px 24px 24px; }
+
+.auth-modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 16px; cursor: pointer;
+    line-height: 1; padding: 3px 7px; border-radius: 2px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.auth-modal-close:hover { border-color: var(--error); color: var(--error); }
+
+.auth-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.auth-tab {
+    flex: 1; background: none; border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-muted);
+    padding: 8px 4px 10px;
+    font-size: 11px; font-weight: 700; font-family: var(--font);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    margin-bottom: -2px;
+}
+
+.auth-tab.active { border-bottom-color: var(--accent); color: var(--text); }
+.auth-tab:hover:not(.active) { color: var(--text); }
+.auth-panel.hidden { display: none; }
+
+.auth-google-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%; padding: 11px;
+    background: #f8f8f8; color: #1a1a1a;
+    border: 2px solid #ddd; border-radius: 2px;
+    font-size: 12px; font-weight: 700; font-family: var(--font);
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.auth-google-btn:hover { background: #fff; border-color: #bbb; }
+
+.auth-or {
+    display: flex; align-items: center;
+    gap: 12px; margin: 16px 0;
+    color: var(--text-dim);
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.auth-or::before, .auth-or::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.auth-input {
+    display: block; width: 100%;
+    background: var(--bg); border: 2px solid var(--border);
+    color: var(--text); padding: 10px 14px; border-radius: 2px;
+    font-size: 14px; font-family: var(--font);
+    margin-bottom: 10px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-input:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow-sm); }
+.auth-input::placeholder { color: var(--text-muted); }
+
+.auth-msg { font-size: 12px; color: var(--error); min-height: 18px; margin: 0 0 10px; }
+.auth-msg--ok { color: var(--success); }
+
+.auth-submit {
+    width: 100%; background: var(--accent); color: var(--accent-text);
+    border: 2px solid var(--accent); padding: 11px; border-radius: 2px;
+    font-size: 12px; font-weight: 700; font-family: var(--font);
+    text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-submit:hover {
+    background: var(--accent-hover); border-color: var(--accent-hover);
+    box-shadow: 0 0 12px var(--accent-glow-sm);
+}
+
+/* ── My Decks panel ────────────────────────────────────── */
+.my-decks-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.6); z-index: 800;
+}
+
+.my-decks-backdrop.open { display: block; }
+
+.my-decks-panel {
+    position: fixed;
+    top: 0; right: -420px;
+    width: 380px; max-width: 100vw; height: 100vh;
+    background: var(--surface);
+    border-left: 2px solid var(--border);
+    z-index: 850;
+    display: flex; flex-direction: column;
+    transition: right 0.3s ease; overflow: hidden;
+}
+
+.my-decks-panel.open { right: 0; }
+
+.my-decks-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 18px 14px;
+    border-bottom: 2px solid var(--border); flex-shrink: 0;
+}
+
+.my-decks-header h3 {
+    margin: 0; font-size: 13px; font-weight: 800;
+    color: var(--text); text-transform: uppercase; letter-spacing: 0.1em;
+}
+
+.my-decks-close {
+    background: transparent; border: 2px solid var(--border);
+    color: var(--text-muted); font-size: 18px; cursor: pointer;
+    padding: 2px 6px; line-height: 1; border-radius: 2px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.my-decks-close:hover { border-color: var(--error); color: var(--error); }
+
+.my-decks-list { flex: 1; overflow-y: auto; padding: 10px 14px; }
+
+.my-decks-info { color: var(--text-muted); font-size: 13px; text-align: center; margin-top: 30px; }
+
+.my-decks-item {
+    border: 2px solid var(--border); border-radius: 2px;
+    padding: 12px; margin-bottom: 8px;
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 10px;
+    transition: border-color 0.15s;
+}
+
+.my-decks-item:hover { border-color: var(--accent); }
+.my-decks-item-name { font-size: 14px; color: var(--text); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.my-decks-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.my-decks-item-info { flex: 1; min-width: 0; }
+.my-decks-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.my-decks-btn {
+    background: none; border: 2px solid var(--border);
+    color: var(--text-muted); padding: 4px 9px; border-radius: 2px;
+    font-size: 10px; font-weight: 700; font-family: var(--font);
+    text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s; white-space: nowrap;
+}
+
+.my-decks-btn:hover { border-color: var(--accent); color: var(--accent); }
+.my-decks-btn.active { border-color: var(--success); color: var(--success); }
+.my-decks-btn--danger:hover { border-color: var(--error); color: var(--error); }
+
+/* ── Deck toolbar ──────────────────────────────────────── */
+.deck-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 2px solid var(--border); flex-wrap: wrap;
+}
+
+.deck-name-input {
+    flex: 1; min-width: 140px;
+    background: var(--bg); border: 2px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 2px;
+    font-size: 13px; font-family: var(--font); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.deck-name-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow-sm); }
+.deck-name-input::placeholder { color: var(--text-muted); }
+
+.deck-save-status {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--success);
+}

@@ -1,10 +1,17 @@
 <!doctype html>
 <html data-theme="dark">
   <head>
-    <title>Mystery Music Player</title>
+    <title>MyHitster — Mystery Music</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
+    <script>
+      /* Apply theme before first paint to prevent flash of unstyled content */
+      (function () {
+        var t = localStorage.getItem('theme');
+        if (!t || t === 'dark' || t === 'light') t = 'neon';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -13,52 +20,109 @@
     <link rel="stylesheet" href="css/index.css" />
   </head>
   <body>
-    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">☀</button>
 
-    <div class="container">
-      <h1>Mystery Music</h1>
+    <!-- Particle network background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <a class="top-bar-logo" href="#">
+        <div class="logo-mark">H</div>
+        <span class="logo-text">MyHitster</span>
+      </a>
+      <div class="top-bar-right">
+        <button id="theme-toggle" class="theme-toggle icon-btn" aria-label="Toggle theme">☀</button>
+      </div>
+    </div>
+
+    <!-- Main player layout -->
+    <main class="app-layout">
+
       <p id="status-message">Scan a QR code to load a track</p>
 
-      <div id="player-section">
-        <button id="play-button">
-          <div class="play-icon"></div>
-        </button>
-
-        <div id="player-wrapper">
-          <div class="player-bar">
-            <span class="mystery-text">Now Playing Mystery Track</span>
+      <!-- Mystery album art card -->
+      <div class="mystery-card-wrap">
+        <div class="mystery-card" id="mystery-card">
+          <div class="card-ring"></div>
+          <div class="mystery-card-inner">
+            <div class="mystery-q">?</div>
+            <div class="mystery-sublabel">Mystery Track</div>
           </div>
-          <div id="mystery-id"></div>
         </div>
-
-        <button id="scan-button">Scan QR Code</button>
       </div>
 
+      <!-- Track ID (shown after scan, set by player.js) -->
+      <div id="mystery-id"></div>
+
+      <!-- Player wrapper (shown by player.js when track loads) -->
+      <div id="player-wrapper">
+        <div class="player-bar">
+          <span class="mystery-text">??? ??? ???</span>
+        </div>
+      </div>
+
+      <!-- Progress bar (always shown, driven by timeupdate) -->
+      <div class="progress-section">
+        <div class="progress-track" id="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Play / Pause button -->
+      <button id="play-button">
+        <div class="play-icon"></div>
+      </button>
+
+      <!-- Scan QR code button -->
+      <button id="scan-button">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="12" y="1" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="1" y="12" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3" y="3" width="1.5" height="1.5" fill="currentColor"/>
+          <rect x="14" y="3" width="1.5" height="1.5" fill="currentColor"/>
+          <rect x="3" y="14" width="1.5" height="1.5" fill="currentColor"/>
+          <path d="M12 12h2v2h-2zM14 12h3M12 14v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
+        </svg>
+        Scan QR Code
+      </button>
+
+      <!-- Loading state -->
       <div id="loading-section" style="display: none">
         <div class="loading">
           <div class="spinner"></div>
-          <p>Loading...</p>
+          <p>Loading…</p>
         </div>
       </div>
-    </div>
 
-    <!-- QR Scanner overlay -->
-    <div id="scanner-container">
-      <div id="video-container">
-        <video id="qr-video" playsinline></video>
-        <div id="scan-overlay"></div>
-        <div id="scan-found-overlay"><span class="found-text">&#10003; Found</span></div>
-      </div>
-      <p id="scanner-status">Position QR code in the frame</p>
-      <button id="close-scanner">Cancel</button>
-    </div>
+    </main>
 
+    <!-- Fixed footer -->
     <footer>
-      <a href="https://wilgoy23.github.io/MyHitster/">MyHitster</a> | Music
-      Guessing Game &nbsp;|&nbsp;
+      <a href="https://wilgoy23.github.io/MyHitster/">MyHitster</a>
+      <span class="footer-sep">|</span>
+      <span>Mystery Music</span>
+      <span class="footer-sep">|</span>
       <a href="card-generator.html">Card Generator</a>
     </footer>
 
+    <!-- QR Scanner overlay — all IDs preserved for scanner.js -->
+    <div id="scanner-container">
+      <p id="scanner-status">Position QR code in the frame</p>
+      <div id="video-container">
+        <video id="qr-video" playsinline></video>
+        <div id="scan-overlay"></div>
+        <span class="scanner-corner scanner-corner-tl"></span>
+        <span class="scanner-corner scanner-corner-tr"></span>
+        <span class="scanner-corner scanner-corner-bl"></span>
+        <span class="scanner-corner scanner-corner-br"></span>
+        <div class="scanner-sweep"></div>
+        <div id="scan-found-overlay"><span class="found-text">&#10003; Found</span></div>
+      </div>
+      <button id="close-scanner">Cancel</button>
+    </div>
+
+    <script src="js/ui/particles.js"></script>
     <script src="js/ui/theme.js"></script>
     <script src="js/core/player.js"></script>
     <script src="js/core/scanner.js"></script>
@@ -69,6 +133,26 @@
         document.getElementById("play-button").addEventListener("click", handlePlayPause);
         document.getElementById("scan-button").addEventListener("click", startScanner);
         document.getElementById("close-scanner").addEventListener("click", stopScanner);
+
+        // Wire progress bar to audio element (defined in player.js)
+        audio.addEventListener("timeupdate", function () {
+          var fill = document.getElementById("progress-fill");
+          if (fill && audio.duration) {
+            fill.style.width = (audio.currentTime / audio.duration * 100) + "%";
+          }
+        });
+        audio.addEventListener("ended", function () {
+          var fill = document.getElementById("progress-fill");
+          if (fill) fill.style.width = "0%";
+        });
+
+        // Toggle mystery card playing state alongside play/pause
+        var _origUpdate = updatePlayButton;
+        updatePlayButton = function () {
+          _origUpdate();
+          var card = document.getElementById("mystery-card");
+          if (card) card.classList.toggle("playing", isPlaying);
+        };
       };
     </script>
   </body>

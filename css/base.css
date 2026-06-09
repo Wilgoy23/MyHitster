@@ -1,0 +1,113 @@
+/* ======================================================
+   base.css — Reset, body, layout primitives
+   No color values. Uses CSS custom properties only.
+   Theme tokens are defined in themes.css.
+   ====================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    margin: 0;
+    padding: 20px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ── Typography ── */
+h1 {
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 24px var(--accent-glow-sm);
+}
+
+p { color: var(--text); }
+
+code {
+    background: var(--surface-raised);
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-size: 0.9em;
+}
+
+/* ── Top bar ── */
+.top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 2px solid var(--border);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 200;
+}
+
+.top-bar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.logo-mark {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border: 2px solid var(--accent);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+    color: var(--accent-text);
+    box-shadow: 0 0 12px var(--accent-glow-sm);
+    flex-shrink: 0;
+}
+
+.logo-text {
+    font-size: 11px; font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative; /* anchor for theme panel */
+}
+
+/* ── Footer fallback (pages may override) ── */
+footer {
+    margin-top: 60px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-dim);
+    border-top: 2px solid var(--border);
+    padding-top: 14px;
+    text-align: center;
+}
+
+footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+footer a:hover { color: var(--accent); }
+
+/* ── Utility ── */
+.error { color: var(--error); margin: 20px 0; }

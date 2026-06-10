@@ -1,3 +1,5 @@
+import { throttle } from './rateLimit.js';
+
 const STRIP_PATTERNS = [
     / \(From .*?\)/gi,
     / - From .+$/gi,
@@ -26,6 +28,7 @@ export function cleanSongTitle(title) {
 }
 
 async function itunesFetch(url) {
+    await throttle('itunes', 3000);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`iTunes request failed: ${res.status}`);
     return res.json();

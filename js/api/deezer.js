@@ -1,6 +1,8 @@
 // Fetches Deezer playlist tracks via JSONP to bypass browser CORS restrictions.
 // Returns [{artist, title}] for every track in the playlist.
 
+import { throttle } from './rateLimit.js';
+
 function jsonp(url) {
     return new Promise((resolve, reject) => {
         const cb = 'dz_' + Date.now();
@@ -17,6 +19,7 @@ export async function fetchDeezerPlaylistTracks(playlistId) {
     let index = 0;
 
     while (true) {
+        await throttle('deezer', 500);
         const page = await jsonp(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=100&index=${index}`);
         if (page.error) throw new Error(page.error.message || 'Playlist not found or private');
 

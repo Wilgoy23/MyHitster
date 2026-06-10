@@ -153,7 +153,6 @@ async function fillMissingPreviews() {
         } catch {
             // leave previewUrl as null
         }
-        if (j < missing.length - 1) await sleep(250);
     }
 
     setLoading(false);
@@ -211,7 +210,6 @@ async function searchItunesForTracks(trackList) {
             tracks.push({ name: title, artist, year: 'Unknown', previewUrl: null, notFound: true });
             notFound++;
         }
-        if (i < trackList.length - 1) await sleep(250);
     }
 
     setLoading(false);
@@ -241,7 +239,6 @@ async function autoFixUnknownYears() {
         } catch (e) {
             console.warn('MusicBrainz lookup failed:', e);
         }
-        if (j < unknown.length - 1) await sleep(1100);
     }
 
     setLoading(false);
@@ -288,7 +285,6 @@ async function verifyWithMusicBrainz() {
         } catch (e) {
             console.warn('MusicBrainz lookup failed:', e);
         }
-        await sleep(1100);
     }
 
     setLoading(false);
@@ -397,8 +393,6 @@ function escHtml(str) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function setDeckSaveStatus(msg, ok = true) {
     const el = document.getElementById('deck-save-status');

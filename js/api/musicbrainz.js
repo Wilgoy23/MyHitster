@@ -1,6 +1,9 @@
+import { throttle } from './rateLimit.js';
+
 // Returns the earliest known release year for a given artist + title,
 // or null if MusicBrainz has no data.
 export async function queryMusicBrainz(artist, title) {
+    await throttle('musicbrainz', 1100);
     const clean = title.split('(')[0].split('[')[0].trim();
     const query = `recording:"${clean}" AND artist:"${artist}"`;
     const url   = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=10`;

@@ -19,6 +19,10 @@ function json(body: unknown, status = 200): Response {
     });
 }
 
+function normalize(s: string): string {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
     if (!DISCOGS_TOKEN) return json({ year: null });
@@ -33,8 +37,14 @@ Deno.serve(async (req) => {
     }
     if (!artist && !title) return json({ year: null });
 
-    const query = `${artist} ${title}`.trim();
-    const url   = `https://api.discogs.com/database/search?type=master&per_page=10&q=${encodeURIComponent(query)}`;
+    // Search by artist + track name rather than a combined free-text query —
+    // a "q=artist title" search matches unrelated masters that merely share a
+    // word with the title, which can drag the picked year way off (e.g. a
+    // same-named song by someone else from decades earlier).
+    const params = new URLSearchParams({ type: 'master', per_page: '10' });
+    if (artist) params.set('artist', artist);
+    if (title)  params.set('track', title);
+    const url = `https://api.discogs.com/database/search?${params.toString()}`;
 
     const resp = await fetch(url, {
         headers: {
@@ -45,10 +55,17 @@ Deno.serve(async (req) => {
     if (!resp.ok) return json({ year: null });
 
     const data = await resp.json();
+    const artistNorm = normalize(artist);
+
     let earliest: number | null = null;
     for (const r of data.results ?? []) {
         const y = parseInt(r.year);
-        if (!isNaN(y) && (earliest === null || y < earliest)) earliest = y;
+        if (isNaN(y)) continue;
+        // Master titles are formatted "Artist - Release Title" — require the
+        // artist to actually appear so a same-named track credited to someone
+        // else doesn't pull the year down.
+        if (artistNorm && !normalize(r.title ?? '').includes(artistNorm)) continue;
+        if (earliest === null || y < earliest) earliest = y;
     }
 
     return json({ year: earliest !== null ? String(earliest) : null });

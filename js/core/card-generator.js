@@ -195,6 +195,7 @@ async function searchItunesForTracks(trackList) {
 
     let notFound = 0, noPreview = 0;
     const mbLookups = [];
+    const discogsChecks = [];
     for (let i = 0; i < trackList.length; i++) {
         const { artist, title } = trackList[i];
         const query = artist ? `${artist} ${title}` : title;
@@ -204,10 +205,15 @@ async function searchItunesForTracks(trackList) {
             if (result) {
                 tracks.push(result);
                 if (!result.previewUrl) noPreview++;
+                const index = tracks.length - 1;
                 // Start the MusicBrainz lookup now and keep searching iTunes —
                 // the two APIs have independent rate-limit queues, so this runs
                 // release-date verification in parallel with the iTunes loop.
-                if (result.year === 'Unknown') mbLookups.push(resolveUnknownYear(tracks.length - 1));
+                if (result.year === 'Unknown') mbLookups.push(resolveUnknownYear(index));
+                // Cross-check the release year against Discogs at the same time —
+                // its own rate-limit queue lets this overlap with the iTunes loop
+                // (no-ops if Supabase isn't configured).
+                discogsChecks.push(applyEarlierYear(index, () => queryDiscogs(result.artist, result.name)));
             } else {
                 tracks.push({ name: title, artist, year: 'Unknown', previewUrl: null, notFound: true });
                 notFound++;
@@ -224,11 +230,18 @@ async function searchItunesForTracks(trackList) {
         resolved = (await Promise.all(mbLookups)).filter(Boolean).length;
     }
 
+    let corrected = 0;
+    if (discogsChecks.length) {
+        updateStatus(`Finishing ${discogsChecks.length} Discogs lookup(s)…`);
+        corrected = (await Promise.all(discogsChecks)).filter(Boolean).length;
+    }
+
     setLoading(false);
     let msg = `Found ${tracks.length - notFound} of ${trackList.length} tracks on iTunes.`;
     if (notFound  > 0) msg += ` ${notFound} not found.`;
     if (noPreview > 0) msg += ` ${noPreview} have no preview.`;
     if (resolved  > 0) msg += ` ${resolved} release date(s) resolved via MusicBrainz.`;
+    if (corrected > 0) msg += ` ${corrected} release date(s) corrected via Discogs.`;
     showStatus(msg, notFound > 0 ? 'warning' : 'success');
     renderTrackList();
 }

@@ -27,17 +27,35 @@ create policy "decks: owner full access"
     on decks for all
     using (auth.uid() = user_id);
 
-create policy "decks: public read by share token"
-    on decks for select
-    using (is_public = true);
-
 create policy "deck_pdfs: owner full access"
     on deck_pdfs for all
     using (deck_id in (select id from decks where user_id = auth.uid()));
 
-create policy "deck_pdfs: public read through public deck"
-    on deck_pdfs for select
-    using (deck_id in (select id from decks where is_public = true));
+-- Shared decks are NOT directly selectable by anon/authenticated users
+-- (no "is_public = true" read policy). Instead, lookup by share token goes
+-- through this function, so a deck is only reachable by someone who has
+-- the exact link rather than being enumerable via `is_public = true`.
+create or replace function get_deck_by_share_token(p_token text)
+returns table (
+    id uuid,
+    name text,
+    tracks jsonb,
+    share_token text,
+    is_public boolean,
+    created_at timestamptz,
+    updated_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select id, name, tracks, share_token, is_public, created_at, updated_at
+    from decks
+    where share_token = p_token and is_public = true;
+$$;
+
+grant execute on function get_deck_by_share_token(text) to anon, authenticated;
 
 -- Storage bucket: create manually in Supabase dashboard (Storage → New bucket → "pdfs", private)
 -- Then add this storage policy:

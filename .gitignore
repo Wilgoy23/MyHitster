@@ -3,3 +3,4 @@ playwright-report/
 test-results/
 .claude
 .mcp.json
+supabase/.temp/

@@ -3,6 +3,7 @@ import { searchItunes, searchItunesEntities,
          fetchAlbumTracks, fetchArtistTracks, cleanSongTitle } from '../api/itunes.js';
 import { fetchDeezerPlaylistTracks }                           from '../api/deezer.js';
 import { queryMusicBrainz }                                    from '../api/musicbrainz.js';
+import { queryDiscogs }                                        from '../api/discogs.js';
 import { generatePDF }                                         from './pdf.js';
 import { isConfigured }                                        from '../backend/supabase.js';
 import { getUser, onAuthStateChange }                          from '../backend/auth.js';
@@ -193,6 +194,7 @@ async function searchItunesForTracks(trackList) {
     setLoading(true, `Searching… (0 / ${trackList.length})`);
 
     let notFound = 0, noPreview = 0;
+    const mbLookups = [];
     for (let i = 0; i < trackList.length; i++) {
         const { artist, title } = trackList[i];
         const query = artist ? `${artist} ${title}` : title;
@@ -202,6 +204,10 @@ async function searchItunesForTracks(trackList) {
             if (result) {
                 tracks.push(result);
                 if (!result.previewUrl) noPreview++;
+                // Start the MusicBrainz lookup now and keep searching iTunes —
+                // the two APIs have independent rate-limit queues, so this runs
+                // release-date verification in parallel with the iTunes loop.
+                if (result.year === 'Unknown') mbLookups.push(resolveUnknownYear(tracks.length - 1));
             } else {
                 tracks.push({ name: title, artist, year: 'Unknown', previewUrl: null, notFound: true });
                 notFound++;
@@ -212,13 +218,31 @@ async function searchItunesForTracks(trackList) {
         }
     }
 
+    let resolved = 0;
+    if (mbLookups.length) {
+        updateStatus(`Finishing ${mbLookups.length} MusicBrainz lookup(s)…`);
+        resolved = (await Promise.all(mbLookups)).filter(Boolean).length;
+    }
+
     setLoading(false);
     let msg = `Found ${tracks.length - notFound} of ${trackList.length} tracks on iTunes.`;
     if (notFound  > 0) msg += ` ${notFound} not found.`;
     if (noPreview > 0) msg += ` ${noPreview} have no preview.`;
+    if (resolved  > 0) msg += ` ${resolved} release date(s) resolved via MusicBrainz.`;
     showStatus(msg, notFound > 0 ? 'warning' : 'success');
     renderTrackList();
-    await autoFixUnknownYears();
+}
+
+// Resolves an "Unknown" release year via MusicBrainz and updates tracks[index] in place.
+async function resolveUnknownYear(index) {
+    const t = tracks[index];
+    try {
+        const year = await queryMusicBrainz(t.artist, t.name);
+        if (year) { tracks[index].year = year; return true; }
+    } catch (e) {
+        console.warn('MusicBrainz lookup failed:', e);
+    }
+    return false;
 }
 
 // ── MusicBrainz: auto-fix unknown years ───────────────────────────────────────
@@ -250,7 +274,7 @@ async function autoFixUnknownYears() {
     }
 }
 
-// ── MusicBrainz: manual broad verification (Step 3) ──────────────────────────
+// ── Manual broad release-date verification (Step 3) ─────────────────────────
 
 const CLASSIC_ARTISTS = [
     'queen', 'led zeppelin', 'pink floyd', 'the beatles', 'rolling stones',
@@ -258,33 +282,51 @@ const CLASSIC_ARTISTS = [
     'the who', 'jimi hendrix', 'the doors', 'eagles', 'fleetwood mac',
 ];
 
+function isSuspiciousYear(track) {
+    const yr = parseInt(track.year);
+    if (isNaN(yr) || yr > 2020) return true;
+    if (yr > 2010) return CLASSIC_ARTISTS.some(a => track.artist.toLowerCase().includes(a));
+    return false;
+}
+
+// Applies `verified` to tracks[index].year if it's earlier than the current
+// value. Returns true if the year was updated.
+async function applyEarlierYear(index, lookup) {
+    try {
+        const verified = await lookup();
+        if (!verified) return false;
+        const current = parseInt(tracks[index].year);
+        const vyr     = parseInt(verified);
+        if (isNaN(current) || vyr < current) { tracks[index].year = verified; return true; }
+    } catch (e) {
+        console.warn('Release-date lookup failed:', e);
+    }
+    return false;
+}
+
 async function verifyWithMusicBrainz() {
     const maxLookups = parseInt(document.getElementById('mb-limit').value) || 25;
-    setLoading(true, 'Starting MusicBrainz verification…');
+    setLoading(true, 'Starting release date verification…');
     let count = 0, updated = 0;
 
     for (let i = 0; i < tracks.length && count < maxLookups; i++) {
         const track = tracks[i];
-        if (!track.previewUrl) continue;
-
-        const yr = parseInt(track.year);
-        let suspicious = isNaN(yr) || yr > 2020;
-        if (!suspicious && yr > 2010) {
-            suspicious = CLASSIC_ARTISTS.some(a => track.artist.toLowerCase().includes(a));
-        }
-        if (!suspicious) continue;
+        if (!track.previewUrl || !isSuspiciousYear(track)) continue;
 
         count++;
         updateStatus(`Verifying ${count}/${maxLookups}: ${track.artist} – ${track.name}`);
-        try {
-            const verified = await queryMusicBrainz(track.artist, track.name);
-            if (verified) {
-                const vyr = parseInt(verified);
-                if (isNaN(yr) || vyr < yr) { tracks[i].year = verified; updated++; }
-            }
-        } catch (e) {
-            console.warn('MusicBrainz lookup failed:', e);
+
+        let changed = await applyEarlierYear(i, () => queryMusicBrainz(track.artist, track.name));
+
+        // Discogs master-release years catch some reissue dates MusicBrainz
+        // misses. Only runs when Supabase is configured (it proxies the
+        // lookup so the Discogs token stays server-side).
+        if (isSuspiciousYear(tracks[i])) {
+            const viaDiscogs = await applyEarlierYear(i, () => queryDiscogs(track.artist, track.name));
+            changed = changed || viaDiscogs;
         }
+
+        if (changed) updated++;
     }
 
     setLoading(false);

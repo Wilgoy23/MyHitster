@@ -62,8 +62,7 @@ export async function deleteDeck(id) {
 
 export async function getDeckByShareToken(token) {
     const { data, error } = await supabase
-        .from('decks').select('*')
-        .eq('share_token', token).eq('is_public', true)
+        .rpc('get_deck_by_share_token', { p_token: token })
         .single();
     if (error) return null;
     return data;

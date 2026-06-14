@@ -363,6 +363,7 @@ details.panel-collapsible > summary + * { padding: 24px; }
 .options-row {
     display: flex; gap: 16px;
     flex-wrap: wrap; align-items: flex-end;
+    justify-content: center;
     margin-top: 12px;
 }
 
@@ -378,7 +379,7 @@ details.panel-collapsible > summary + * { padding: 24px; }
 
 .option-group input[type="number"],
 .option-group input[type="text"] {
-    width: 90px;
+    width: 115px;
     background: var(--bg); border: 2px solid var(--border);
     border-radius: 2px; color: var(--text);
     font-size: 14px; font-family: var(--font);
@@ -391,6 +392,7 @@ details.panel-collapsible > summary + * { padding: 24px; }
 .mb-row {
     display: flex; gap: 12px;
     align-items: flex-end; flex-wrap: wrap;
+    justify-content: center;
 }
 
 /* =====================

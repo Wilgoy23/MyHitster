@@ -11,6 +11,11 @@
 //    https://<your-supabase-project>.supabase.co/auth/v1/callback
 // 6. In Authentication → URL Configuration, add your site URL to Allowed Redirect URLs
 //    e.g. https://wilgoy23.github.io/MyHitster/card-generator.html
+// 7. (Optional) For Discogs cross-checking in Step 3:
+//    - Get a personal access token at https://www.discogs.com/settings/developers
+//    - Run: supabase secrets set DISCOGS_TOKEN=your_token_here
+//    - Run: supabase functions deploy discogs-year
+//    The token stays server-side; Discogs checks are skipped if not set up.
 
 export const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
 export const SUPABASE_ANON_KEY = 'your-anon-key-here';

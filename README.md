@@ -39,7 +39,8 @@ A browser-based music guessing game inspired by Hitster. Scan a QR code to hear 
 │   ├── api/
 │   │   ├── deezer.js           Deezer playlist fetching
 │   │   ├── itunes.js           iTunes search and preview matching
-│   │   └── musicbrainz.js      MusicBrainz release-date lookup
+│   │   ├── musicbrainz.js      MusicBrainz release-date lookup
+│   │   └── discogs.js          Discogs release-date lookup (via Supabase Edge Function, optional)
 │   ├── backend/
 │   │   ├── supabase.js         Supabase client singleton (null when unconfigured)
 │   │   ├── auth.js             Auth widget and state (optional)

@@ -10,9 +10,15 @@ function buildQrUrl(previewUrl, cardHash) {
     return `${HITSTER_URL}/index.html?id=${cardHash}&preview=${encoded}`;
 }
 
+// Strips characters that aren't safe in a filename and falls back to a default if empty.
+function sanitizeFilename(name) {
+    const cleaned = name.replace(/[\\/:*?"<>|]/g, '').trim();
+    return cleaned || 'Hitster_cards';
+}
+
 // Generates and downloads the PDF.
 // onProgress(message) is called with status strings during generation.
-export async function generatePDF(tracks, onProgress = () => {}) {
+export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hitster_cards') {
     const playableTracks = tracks.filter(t => t.previewUrl);
     if (!playableTracks.length) return;
 
@@ -143,6 +149,6 @@ export async function generatePDF(tracks, onProgress = () => {}) {
     }
 
     const blob = doc.output('blob');
-    doc.save('Hitster_cards.pdf');
+    doc.save(`${sanitizeFilename(filename)}.pdf`);
     return blob;
 }

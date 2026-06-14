@@ -352,7 +352,8 @@ async function verifyWithMusicBrainz() {
 async function handleGeneratePDF() {
     setLoading(true, 'Starting PDF generation…');
     try {
-        const blob = await generatePDF(tracks, msg => updateStatus(msg));
+        const filename = document.getElementById('pdf-name-input').value.trim();
+        const blob = await generatePDF(tracks, msg => updateStatus(msg), filename || undefined);
         showStatus('PDF downloaded! Print double-sided with "Flip on short edge" for correct alignment.', 'success');
 
         if (isConfigured && getUser() && getCurrentDeckId() && blob) {

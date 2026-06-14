@@ -1,6 +1,5 @@
 node_modules/
 playwright-report/
 test-results/
-js/backend/config.js
 .claude
 .mcp.json

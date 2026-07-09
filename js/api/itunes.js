@@ -51,23 +51,3 @@ export async function searchItunes(query) {
     };
 }
 
-// Returns raw iTunes results for album or musicArtist entity searches.
-export async function searchItunesEntities(query, entity) {
-    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=${entity}&media=music&limit=12`;
-    const data = await itunesFetch(url);
-    return data.results || [];
-}
-
-// Returns raw song result objects for a given album collection ID.
-export async function fetchAlbumTracks(collectionId) {
-    const url = `https://itunes.apple.com/lookup?id=${collectionId}&entity=song`;
-    const data = await itunesFetch(url);
-    return data.results.filter(r => r.wrapperType === 'track' && r.kind === 'song');
-}
-
-// Returns raw song result objects for a given artist ID (up to 50).
-export async function fetchArtistTracks(artistId) {
-    const url = `https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=50`;
-    const data = await itunesFetch(url);
-    return data.results.filter(r => r.wrapperType === 'track' && r.kind === 'song');
-}

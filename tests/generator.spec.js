@@ -1,39 +1,5 @@
 const { test, expect } = require('@playwright/test');
 
-const MOCK_ALBUM_SEARCH = {
-    results: [{
-        wrapperType: 'collection',
-        collectionType: 'Album',
-        collectionId: 99999,
-        collectionName: 'A Night at the Opera',
-        artistName: 'Queen',
-        releaseDate: '1975-11-21T08:00:00Z',
-        trackCount: 12,
-        artworkUrl100: 'https://example.com/art100x100bb.jpg',
-    }],
-};
-
-const MOCK_ALBUM_TRACKS = {
-    results: [
-        { wrapperType: 'artist', artistName: 'Queen' },
-        {
-            wrapperType: 'track', kind: 'song',
-            trackName: 'Bohemian Rhapsody', artistName: 'Queen',
-            collectionName: 'A Night at the Opera',
-            releaseDate: '1975-10-31T07:00:00Z',
-            previewUrl: 'https://example.com/preview.mp3',
-        },
-    ],
-};
-
-const MOCK_ARTIST_SEARCH = {
-    results: [{
-        wrapperType: 'artist',
-        artistId: 77777,
-        artistName: 'Queen',
-    }],
-};
-
 const MOCK_ITUNES_RESULT = {
     results: [{
         trackName: 'Bohemian Rhapsody',
@@ -54,150 +20,66 @@ const MOCK_ITUNES_NO_PREVIEW = {
     }],
 };
 
-// Extracts the JSONP callback name from the URL and wraps the payload.
-function itunesFulfill(route, payload) {
-    const cb = (route.request().url().match(/[?&]callback=([^&]+)/) ?? [])[1] ?? '_cb';
+const DEEZER_TRACK = {
+    title:   'Under Pressure',
+    artist:  { name: 'Queen' },
+    preview: 'https://cdns-preview.dzcdn.net/stream/x.mp3',
+    album:   { id: 555, title: 'Hot Space' },
+};
+
+// Deezer is called via JSONP — the payload must be wrapped in the callback.
+function deezerFulfill(route, payload) {
+    const cb = (route.request().url().match(/callback=([^&]+)/) ?? [])[1] ?? 'cb';
     return route.fulfill({
-        status: 200,
         contentType: 'application/javascript',
         body: `${cb}(${JSON.stringify(payload)})`,
     });
 }
 
+// Mocks a one-page Deezer playlist plus its album (release year 1981).
+async function mockDeezer(page, { tracks = [DEEZER_TRACK], releaseDate = '1981-11-30' } = {}) {
+    await page.route('**/api.deezer.com/playlist/**', route =>
+        deezerFulfill(route, { data: tracks, next: null }));
+    await page.route('**/api.deezer.com/album/**', route =>
+        deezerFulfill(route, { id: 555, release_date: releaseDate }));
+}
+
+async function importPlaylist(page) {
+    await page.goto('/card-generator.html');
+    await page.fill('#playlist-url-input', 'https://www.deezer.com/playlist/123456');
+    await page.click('#playlist-import-btn');
+    await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
+}
+
 test.describe('Card Generator', () => {
     test.beforeEach(async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', route => itunesFulfill(route, MOCK_ITUNES_RESULT));
+        // The iTunes API is called with fetch(), so mocks return plain JSON.
+        await page.route('**/itunes.apple.com/**', route => route.fulfill({ json: MOCK_ITUNES_RESULT }));
+        // Block the real Supabase backend (Discogs cross-check no-ops on failure)
+        await page.route('**/*.supabase.co/**', route => route.fulfill({ status: 404, json: {} }));
+        // Verification runs automatically after import — default to no MB matches
+        await page.route('**/musicbrainz.org/**', route => route.fulfill({ json: { recordings: [] } }));
     });
 
     test('loads with correct initial state', async ({ page }) => {
         await page.goto('/card-generator.html');
-        await expect(page).toHaveTitle('Hitster Card Generator');
-        await expect(page.locator('a[href="https://exportify.net"]').first()).toBeVisible();
-        await expect(page.locator('#track-input')).toBeVisible();
-        await expect(page.locator('#search-btn')).toBeVisible();
+        await expect(page).toHaveTitle('MyHitster — Card Generator');
+        await expect(page.locator('#playlist-url-input')).toBeVisible();
+        await expect(page.locator('#playlist-import-btn')).toBeVisible();
         await expect(page.locator('#track-list-section')).toBeHidden();
         await expect(page.locator('#generate-btn')).toBeHidden();
     });
 
-    test('back link navigates to player', async ({ page }) => {
+    test('nav link navigates to player', async ({ page }) => {
         await page.goto('/card-generator.html');
-        await page.click('a.back-link');
+        await page.click('.top-bar-nav a[href="index.html"]');
         await expect(page).toHaveURL(/index\.html|\/$|localhost:8080\/$/);
     });
 
-    test('shows error for empty input', async ({ page }) => {
+    test('shows error when Deezer URL input is empty', async ({ page }) => {
         await page.goto('/card-generator.html');
-        await page.click('#search-btn');
-        await expect(page.locator('#status-message')).toContainText('upload a CSV or paste');
-    });
-
-    test('searches iTunes and renders track list', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Queen - Bohemian Rhapsody');
-        await page.click('#search-btn');
-
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 10000 });
-        await expect(page.locator('#track-tbody tr')).toHaveCount(1);
-        await expect(page.locator('#track-tbody')).toContainText('Queen');
-        await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
-        await expect(page.locator('.year-input')).toHaveValue('1975');
-        await expect(page.locator('#generate-btn')).toBeVisible();
-    });
-
-    test('year filter highlights out-of-range tracks', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Queen - Bohemian Rhapsody');
-        await page.click('#search-btn');
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 10000 });
-
-        await page.fill('#min-year', '1980');
-        await page.fill('#max-year', '2000');
-        await page.click('#year-filter-apply');
-
-        await expect(page.locator('#track-tbody tr.out-of-range')).toHaveCount(1);
-    });
-
-    test('year filter does not highlight in-range tracks', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Queen - Bohemian Rhapsody');
-        await page.click('#search-btn');
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 10000 });
-
-        await page.fill('#min-year', '1970');
-        await page.fill('#max-year', '1980');
-        await page.click('#year-filter-apply');
-
-        await expect(page.locator('#track-tbody tr.out-of-range')).toHaveCount(0);
-    });
-
-    test('year is editable in track list', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Queen - Bohemian Rhapsody');
-        await page.click('#search-btn');
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 10000 });
-
-        await page.fill('.year-input', '1974');
-        await page.locator('.year-input').press('Tab');
-        await expect(page.locator('.year-input')).toHaveValue('1974');
-    });
-
-    test('no-preview track shows warning badge and hides generate button', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', route => itunesFulfill(route, MOCK_ITUNES_NO_PREVIEW));
-
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Obscure Track - Unknown Artist');
-        await page.click('#search-btn');
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 10000 });
-
-        await expect(page.locator('.badge-warning')).toBeVisible();
-        await expect(page.locator('#generate-btn')).toBeHidden();
-    });
-
-    test('CSV file upload populates textarea', async ({ page }) => {
-        await page.goto('/card-generator.html');
-
-        const csvContent = [
-            'Spotify ID,Artist Name(s),Track Name,Album Name,Release Date',
-            '1234,Queen,Bohemian Rhapsody,A Night at the Opera,1975-10-31',
-        ].join('\n');
-
-        await page.locator('#csv-upload').setInputFiles({
-            name: 'playlist.csv',
-            mimeType: 'text/csv',
-            buffer: Buffer.from(csvContent),
-        });
-
-        await expect(page.locator('#track-input')).toHaveValue(csvContent);
-        await expect(page.locator('#status-message')).toContainText('playlist.csv');
-    });
-
-    test('parses multiple tracks and renders all rows', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.fill('#track-input', 'Queen - Bohemian Rhapsody\nABBA - Dancing Queen\nMichael Jackson - Thriller');
-        await page.click('#search-btn');
-
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
-        await expect(page.locator('#track-tbody tr')).toHaveCount(3);
-    });
-
-    // ── Deezer playlist import ──────────────────────────────────────────────────
-
-    test('imports Deezer playlist and renders tracks', async ({ page }) => {
-        await page.route('**/api.deezer.com/**', async route => {
-            const cb = (route.request().url().match(/callback=([^&]+)/) ?? [])[1] ?? 'cb';
-            await route.fulfill({
-                contentType: 'application/javascript',
-                body: `${cb}(${JSON.stringify({ data: [{ title: 'Bohemian Rhapsody', artist: { name: 'Queen' } }], next: null })})`,
-            });
-        });
-
-        await page.goto('/card-generator.html');
-        await page.fill('#playlist-url-input', 'https://www.deezer.com/playlist/123456');
         await page.click('#playlist-import-btn');
-
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
-        await expect(page.locator('#track-tbody tr')).toHaveCount(1);
-        await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
+        await expect(page.locator('#status-message')).toContainText('Paste a Deezer playlist URL first');
     });
 
     test('shows error for invalid Deezer URL', async ({ page }) => {
@@ -207,82 +89,124 @@ test.describe('Card Generator', () => {
         await expect(page.locator('#status-message')).toContainText('not recognised');
     });
 
-    test('shows error when Deezer URL input is empty', async ({ page }) => {
-        await page.goto('/card-generator.html');
-        await page.click('#playlist-import-btn');
-        await expect(page.locator('#status-message')).toContainText('Paste a Deezer playlist URL first');
-    });
-
-    test('Deezer import triggered by Enter key', async ({ page }) => {
+    test('import triggered by Enter key', async ({ page }) => {
         await page.goto('/card-generator.html');
         await page.fill('#playlist-url-input', 'https://www.example.com/not-a-playlist');
         await page.press('#playlist-url-input', 'Enter');
         await expect(page.locator('#status-message')).toContainText('not recognised');
     });
 
-    // ── iTunes direct search (album / artist tabs) ──────────────────────────────
-
-    test('iTunes album search renders result cards', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', async route => {
-            const url = route.request().url();
-            const body = url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT;
-            await itunesFulfill(route, body);
+    test('imports playlist with Deezer previews and years, no iTunes requests', async ({ page }) => {
+        let itunesRequests = 0;
+        await page.route('**/itunes.apple.com/**', route => {
+            itunesRequests++;
+            return route.fulfill({ json: MOCK_ITUNES_RESULT });
         });
+        await mockDeezer(page);
 
-        await page.goto('/card-generator.html');
-        await page.fill('#itunes-search-input', 'Queen');
-        await page.click('#itunes-search-btn');
+        await importPlaylist(page);
 
-        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
-        await expect(page.locator('.result-name')).toContainText('A Night at the Opera');
-        await expect(page.locator('.result-sub')).toContainText('Queen');
-    });
-
-    test('clicking iTunes album result imports tracks', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', async route => {
-            const url = route.request().url();
-            await itunesFulfill(route, url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT);
-        });
-        await page.route('**/itunes.apple.com/lookup**', async route => {
-            await itunesFulfill(route, MOCK_ALBUM_TRACKS);
-        });
-
-        await page.goto('/card-generator.html');
-        await page.fill('#itunes-search-input', 'Queen');
-        await page.click('#itunes-search-btn');
-        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
-        await page.locator('.result-card').first().click();
-
-        await expect(page.locator('#track-list-section')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('#track-tbody tr')).toHaveCount(1);
-        await expect(page.locator('#track-tbody')).toContainText('Bohemian Rhapsody');
+        await expect(page.locator('#track-tbody')).toContainText('Under Pressure');
+        await expect(page.locator('.year-input')).toHaveValue('1981');
+        await expect(page.locator('.badge-ok')).toBeVisible();
+        await expect(page.locator('#generate-btn')).toBeVisible();
+        expect(itunesRequests).toBe(0);
     });
 
-    test('iTunes search triggered by Enter key', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', async route => {
-            const url = route.request().url();
-            await itunesFulfill(route, url.includes('entity=album') ? MOCK_ALBUM_SEARCH : MOCK_ITUNES_RESULT);
-        });
+    test('falls back to an iTunes preview when Deezer has none', async ({ page }) => {
+        await mockDeezer(page, { tracks: [{ ...DEEZER_TRACK, preview: null }] });
 
-        await page.goto('/card-generator.html');
-        await page.fill('#itunes-search-input', 'Queen');
-        await page.press('#itunes-search-input', 'Enter');
-        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
+        await importPlaylist(page);
+
+        await expect(page.locator('.badge-ok')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('#generate-btn')).toBeVisible();
     });
 
-    test('iTunes artist tab search renders artist results', async ({ page }) => {
-        await page.route('**/itunes.apple.com/search**', async route => {
-            const url = route.request().url();
-            await itunesFulfill(route, url.includes('entity=musicArtist') ? MOCK_ARTIST_SEARCH : MOCK_ITUNES_RESULT);
-        });
+    test('shows warning badge and hides generate button when no preview exists anywhere', async ({ page }) => {
+        await page.route('**/itunes.apple.com/**', route => route.fulfill({ json: MOCK_ITUNES_NO_PREVIEW }));
+        await mockDeezer(page, { tracks: [{ ...DEEZER_TRACK, preview: null }] });
 
-        await page.goto('/card-generator.html');
-        await page.click('[data-tab="artist"]');
-        await page.fill('#itunes-search-input', 'Queen');
-        await page.click('#itunes-search-btn');
+        await importPlaylist(page);
 
-        await expect(page.locator('.result-card')).toBeVisible({ timeout: 10000 });
-        await expect(page.locator('.result-name')).toContainText('Queen');
-        await expect(page.locator('.result-sub')).toContainText('Artist');
+        await expect(page.locator('.badge-warning')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('#generate-btn')).toBeHidden();
+    });
+
+    test('year filter highlights out-of-range tracks', async ({ page }) => {
+        await mockDeezer(page);
+        await importPlaylist(page);
+
+        await page.click('#panel-year-filter summary');
+        await page.fill('#min-year', '1990');
+        await page.fill('#max-year', '2000');
+        await page.click('#year-filter-apply');
+
+        await expect(page.locator('#track-tbody tr.out-of-range')).toHaveCount(1);
+    });
+
+    test('year filter does not highlight in-range tracks', async ({ page }) => {
+        await mockDeezer(page);
+        await importPlaylist(page);
+
+        await page.click('#panel-year-filter summary');
+        await page.fill('#min-year', '1970');
+        await page.fill('#max-year', '1990');
+        await page.click('#year-filter-apply');
+
+        await expect(page.locator('#track-tbody tr.out-of-range')).toHaveCount(0);
+    });
+
+    test('year is editable in track list', async ({ page }) => {
+        await mockDeezer(page);
+        await importPlaylist(page);
+
+        await page.fill('.year-input', '1974');
+        await page.locator('.year-input').press('Tab');
+        await expect(page.locator('.year-input')).toHaveValue('1974');
+    });
+
+    test('automatically corrects reissue year via MusicBrainz and flags the disagreement', async ({ page }) => {
+        await mockDeezer(page, { releaseDate: '2011-09-05' }); // reissue year
+        await page.route('**/musicbrainz.org/**', route => route.fulfill({
+            json: {
+                recordings: [
+                    // Low-score fuzzy match must be ignored…
+                    { score: 60, title: 'Under Pressure', 'artist-credit': [{ name: 'Queen' }],
+                      'first-release-date': '1950-01-01' },
+                    // …confident match for the right song provides the real original year.
+                    { score: 100, title: 'Under Pressure', 'artist-credit': [{ name: 'Queen' }],
+                      'first-release-date': '1981-10-26' },
+                ],
+            },
+        }));
+
+        await importPlaylist(page);
+
+        // Verification runs automatically — earliest credible year wins
+        await expect(page.locator('.year-input')).toHaveValue('1981', { timeout: 15000 });
+        await expect(page.locator('#track-tbody .year-flag')).toBeVisible();
+        await expect(page.locator('#track-tbody .year-flag')).toHaveAttribute('title', /Deezer: 2011.*MusicBrainz: 1981/);
+    });
+
+    test('ignores confident MusicBrainz matches for a different song or artist', async ({ page }) => {
+        await mockDeezer(page); // real album year 1981
+        await page.route('**/musicbrainz.org/**', route => route.fulfill({
+            json: {
+                recordings: [
+                    // Same-named song by another artist — must not pull the year down
+                    { score: 100, title: 'Under Pressure', 'artist-credit': [{ name: 'Someone Else' }],
+                      'first-release-date': '1950-01-01' },
+                    // Different song by the same artist — must not pull the year down
+                    { score: 100, title: 'Completely Different Song', 'artist-credit': [{ name: 'Queen' }],
+                      'first-release-date': '1955-01-01' },
+                ],
+            },
+        }));
+
+        await importPlaylist(page);
+
+        await expect(page.locator('.year-input')).toHaveValue('1981', { timeout: 15000 });
+        await expect(page.locator('#track-tbody .year-flag')).toHaveCount(0);
     });
 });

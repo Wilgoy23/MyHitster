@@ -5,31 +5,10 @@
 */
 
 document.addEventListener('DOMContentLoaded', () => {
-    initImportTabs();
     initUrlValidation();
     initYearValidation();
     initLoadingProgress();
 });
-
-// ── Import source tabs ────────────────────────────────────────────────────────
-
-function initImportTabs() {
-    const tabs   = document.querySelectorAll('.import-tab');
-    const panels = document.querySelectorAll('.import-panel');
-    if (!tabs.length) return;
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const target = tab.dataset.import;
-
-            tabs.forEach(t => t.classList.toggle('active', t === tab));
-            panels.forEach(p => {
-                const active = p.id === `import-panel-${target}`;
-                p.classList.toggle('active', active);
-            });
-        });
-    });
-}
 
 // ── Deezer URL inline validation ─────────────────────────────────────────────
 

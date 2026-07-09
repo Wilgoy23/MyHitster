@@ -153,147 +153,6 @@ details.panel-collapsible > summary + * { padding: 24px; }
 }
 
 /* =====================
-   Import source tabs
-   ===================== */
-.import-tabbar {
-    display: flex;
-    gap: 0;
-    border: 2px solid var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    width: fit-content;
-}
-
-.import-tab {
-    background: transparent;
-    border: none;
-    border-right: 2px solid var(--border);
-    color: var(--text-muted);
-    padding: 8px 20px;
-    font-size: 10px; font-weight: 700;
-    font-family: var(--font);
-    text-transform: uppercase; letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-}
-
-.import-tab:last-child { border-right: none; }
-.import-tab.active { background: var(--accent); color: var(--accent-text); }
-.import-tab:hover:not(.active) { background: var(--surface-raised); color: var(--text); }
-
-.import-panel { display: none; }
-.import-panel.active { display: block; }
-
-/* =====================
-   iTunes sub-tabs (Album / Artist)
-   ===================== */
-.search-tab-row {
-    display: flex; gap: 0;
-    border: 2px solid var(--border);
-    width: fit-content;
-    border-radius: 2px; overflow: hidden;
-}
-
-.tab-btn {
-    background: transparent;
-    border: none; border-right: 2px solid var(--border);
-    color: var(--text-muted);
-    padding: 6px 18px; border-radius: 0;
-    font-size: 10px; font-weight: 700; font-family: var(--font);
-    text-transform: uppercase; letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-}
-
-.tab-btn:last-child { border-right: none; }
-.tab-btn.active { background: var(--accent); color: var(--accent-text); }
-.tab-btn:hover:not(.active) { background: var(--surface-raised); color: var(--text); }
-
-.itunes-results {
-    margin-top: 10px;
-    display: flex; flex-direction: column;
-    gap: 4px;
-    max-height: 280px; overflow-y: auto;
-}
-
-.result-card {
-    display: flex; align-items: center;
-    gap: 12px; background: var(--bg);
-    border: 2px solid var(--border);
-    border-radius: 2px; padding: 10px 12px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-}
-
-.result-card:hover { border-color: var(--accent); }
-
-.result-artwork {
-    width: 48px; height: 48px;
-    border-radius: 0; object-fit: cover;
-    flex-shrink: 0; border: 1px solid var(--border);
-}
-
-.result-info { flex: 1; min-width: 0; }
-
-.result-name {
-    font-size: 14px; font-weight: 600; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-.result-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-
-/* =====================
-   Exportify box
-   ===================== */
-.exportify-box {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
-    background: var(--bg);
-    border: 2px solid var(--border);
-    border-radius: 2px; padding: 14px 18px;
-    margin-bottom: 16px;
-}
-
-.exportify-steps {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 6px 10px; align-items: center;
-    font-size: 13px; color: var(--text);
-}
-
-.exportify-steps a { color: var(--accent); text-decoration: none; font-weight: 700; }
-.exportify-steps a:hover { text-decoration: underline; }
-
-.step-num {
-    background: var(--accent); color: var(--accent-text);
-    width: 20px; height: 20px; border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 800; flex-shrink: 0;
-}
-
-.exportify-btn { white-space: nowrap; flex-shrink: 0; }
-
-/* =====================
-   Manual toggle (details)
-   ===================== */
-.manual-toggle { margin-bottom: 8px; }
-
-.manual-toggle summary {
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--text-muted); cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-}
-
-.manual-toggle summary:hover { color: var(--text); }
-
-.upload-hint { font-size: 12px; color: var(--text-muted); }
-
-/* =====================
    Input row
    ===================== */
 .input-row {
@@ -313,49 +172,6 @@ details.panel-collapsible > summary + * { padding: 24px; }
     border-color: var(--accent);
     box-shadow: 0 0 10px var(--accent-glow-sm);
 }
-
-/* Track textarea */
-#track-input {
-    width: 100%;
-    background: var(--bg); border: 2px solid var(--border);
-    border-radius: 2px; color: var(--text);
-    font-size: 14px; font-family: var(--font);
-    padding: 10px 12px; resize: vertical; outline: none;
-    line-height: 1.5;
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-#track-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow-sm);
-}
-
-#track-input.drag-over {
-    border-color: var(--success);
-    background: rgba(0, 255, 157, 0.04);
-}
-
-/* =====================
-   Upload row
-   ===================== */
-.upload-row {
-    display: flex; align-items: center;
-    gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
-}
-
-.upload-label {
-    cursor: pointer;
-    background: transparent;
-    border: 2px solid var(--border-bright);
-    border-radius: 2px; color: var(--text-muted);
-    padding: 8px 16px;
-    font-size: 10px; font-weight: 700;
-    font-family: var(--font);
-    text-transform: uppercase; letter-spacing: 0.1em;
-    transition: border-color 0.15s, color 0.15s;
-}
-
-.upload-label:hover { border-color: var(--accent); color: var(--accent); }
 
 /* =====================
    Options row (year filter / MB verify)
@@ -519,8 +335,6 @@ tbody tr:hover { background-color: var(--surface-raised); }
 tbody tr.out-of-range  { background-color: rgba(255, 179, 0, 0.07); }
 tbody tr.out-of-range:hover { background-color: rgba(255, 179, 0, 0.14); }
 tbody tr.no-preview    { background-color: rgba(255, 179, 0, 0.03); }
-tbody tr.not-found     { background-color: rgba(255, 77, 109, 0.06); }
-tbody tr.not-found td  { color: var(--text-muted); }
 
 tbody td { padding: 8px 10px; color: var(--text); vertical-align: middle; }
 
@@ -540,6 +354,18 @@ tbody td:first-child {
 
 .year-input:focus { outline: none; border-color: var(--accent); }
 
+/* Year cell with disagreement flag */
+.year-cell { white-space: nowrap; }
+
+.year-flag {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; margin-left: 6px;
+    background: var(--warning, #ffb300); color: #000;
+    border-radius: 50%;
+    font-size: 11px; font-weight: 800;
+    cursor: help; vertical-align: middle;
+}
+
 /* Preview status badges */
 .badge {
     display: inline-block; padding: 2px 6px; border-radius: 2px;
@@ -549,7 +375,6 @@ tbody td:first-child {
 
 .badge-ok      { border-color: var(--success); color: var(--success); }
 .badge-warning { border-color: var(--warning); color: var(--warning); }
-.badge-error   { border-color: var(--error);   color: var(--error); }
 
 /* =====================
    Generate button
@@ -581,20 +406,11 @@ footer a:hover { color: var(--accent); }
     .option-group input[type="number"],
     .option-group input[type="text"] { width: 100%; }
 
-    .import-tabbar { width: 100%; }
-    .import-tab { flex: 1; text-align: center; padding: 8px 10px; }
-
     .panel-body { padding: 16px; }
     details.panel-collapsible > summary + * { padding: 16px; }
 
-    .exportify-box { flex-direction: column; gap: 12px; }
-    .exportify-steps { font-size: 12px; }
-
     /* Table scrolls horizontally rather than overflowing */
     .table-wrapper { font-size: 12px; }
-
-    .search-tab-row { width: 100%; }
-    .tab-btn { flex: 1; text-align: center; }
 
     footer { margin-top: 24px; padding-top: 12px; }
 }

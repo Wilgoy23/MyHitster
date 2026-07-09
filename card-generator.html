@@ -48,77 +48,12 @@
       <div class="panel">
         <h2><span class="step-badge">1</span>Get your tracks</h2>
         <div class="panel-body">
-
-          <!-- Import source tabs -->
-          <div class="import-tabbar">
-            <button class="import-tab active" data-import="playlist">Playlist URL</button>
-            <button class="import-tab" data-import="itunes">iTunes Search</button>
-            <button class="import-tab" data-import="paste">Paste / Upload</button>
+          <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Works with public Deezer playlists — previews and release years come straight from Deezer. <a href="https://www.deezer.com/en/channels/explore/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:700">Get your tracks &#8599;</a></p>
+          <div class="input-row">
+            <input type="text" id="playlist-url-input" placeholder="https://www.deezer.com/playlist/…" />
+            <button class="btn" id="playlist-import-btn">Import</button>
           </div>
-
-          <!-- Tab A: Playlist URL -->
-          <div class="import-panel active" id="import-panel-playlist">
-            <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Works with public Deezer playlists. Each track is matched to an iTunes 30-second preview. <a href="https://www.deezer.com/en/channels/explore/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:700">Get your tracks &#8599;</a></p>
-            <div class="input-row">
-              <input type="text" id="playlist-url-input" placeholder="https://www.deezer.com/playlist/…" />
-              <button class="btn" id="playlist-import-btn">Import</button>
-            </div>
-            <p id="url-input-feedback" class="url-feedback"></p>
-          </div>
-
-          <!-- Tab B: iTunes direct search -->
-          <div class="import-panel" id="import-panel-itunes">
-            <div class="search-tab-row">
-              <button class="tab-btn active" data-tab="album">Album</button>
-              <button class="tab-btn" data-tab="artist">Artist</button>
-            </div>
-            <div class="input-row" style="margin:10px 0 0">
-              <input type="text" id="itunes-search-input" placeholder="e.g. Abbey Road, Dark Side of the Moon…" />
-              <button class="btn" id="itunes-search-btn">Search</button>
-            </div>
-            <div id="itunes-results" class="itunes-results"></div>
-          </div>
-
-          <!-- Tab C: Paste / Upload -->
-          <div class="import-panel" id="import-panel-paste">
-            <div class="exportify-box">
-              <div class="exportify-steps">
-                <span class="step-num">1</span>
-                <span>Open <a href="https://exportify.net" target="_blank" rel="noopener">exportify.net</a> and connect your Spotify there</span>
-                <span class="step-num">2</span>
-                <span>Click <strong>Export</strong> next to your playlist &mdash; downloads a CSV</span>
-                <span class="step-num">3</span>
-                <span>Upload that CSV below &mdash; no account needed here</span>
-              </div>
-              <a class="btn btn-green exportify-btn" href="https://exportify.net" target="_blank" rel="noopener">
-                Open Exportify &#8599;
-              </a>
-            </div>
-
-            <div class="upload-row">
-              <label class="upload-label" for="csv-upload">&#8593; Upload CSV</label>
-              <input type="file" id="csv-upload" accept=".csv,.txt,.tsv" style="display:none" />
-              <span class="upload-hint">drag &amp; drop onto the text area also works</span>
-            </div>
-
-            <details class="manual-toggle">
-              <summary>Or paste tracks manually</summary>
-              <p style="font-size:12px;color:var(--text-muted);margin:8px 0">
-                One per line &mdash; <code style="background:var(--surface-raised);padding:1px 5px;border:1px solid var(--border);border-radius:2px">Artist - Title</code>.
-                Also accepts Spotify desktop copy (select all tracks &rarr; Ctrl+C &rarr; paste).
-              </p>
-            </details>
-
-            <textarea
-              id="track-input"
-              placeholder="Paste CSV content or tracks here&#10;&#10;Queen - Bohemian Rhapsody&#10;ABBA - Dancing Queen&#10;Michael Jackson - Thriller"
-              rows="8"
-            ></textarea>
-
-            <div style="margin-top:10px">
-              <button class="btn" id="search-btn">Search iTunes</button>
-            </div>
-          </div>
+          <p id="url-input-feedback" class="url-feedback"></p>
 
           <p id="status-message" class="status"></p>
         </div>
@@ -152,14 +87,14 @@
           <h2><span class="step-badge" style="background:var(--surface-raised);color:var(--text-muted);box-shadow:none">3</span>Verify release dates <span class="optional-tag">optional</span></h2>
         </summary>
         <p style="font-size:13px;color:var(--text-muted);margin:12px 0">
-          Cross-checks suspicious dates against MusicBrainz (and Discogs, if signed-in features are configured). Rate-limited to about one request per second.
+          Every imported track is automatically cross-checked against Deezer, MusicBrainz and Discogs,
+          keeping the earliest credible year — the original release, not a reissue or compilation date
+          (about a second per track). Tracks whose sources disagree get a
+          <span class="year-flag" style="position:static">!</span> flag in the list for manual review.
+          Use the button to re-run the check, e.g. after loading a saved deck.
         </p>
         <div class="mb-row">
-          <div class="option-group">
-            <label for="mb-limit">Max lookups</label>
-            <input type="number" id="mb-limit" value="25" min="1" max="200" />
-          </div>
-          <button class="btn btn-secondary" id="verify-btn">Verify dates</button>
+          <button class="btn btn-secondary" id="verify-btn">Re-verify all release dates</button>
         </div>
       </details>
 
@@ -180,7 +115,7 @@
             <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px">
               <span style="color:var(--warning)">&#9632;</span> Outside year range &nbsp;&nbsp;
               <span style="color:var(--warning);opacity:.5">&#9632;</span> No preview (excluded from PDF) &nbsp;&nbsp;
-              <span style="color:var(--error)">&#9632;</span> Not found on iTunes
+              <span class="year-flag" style="position:static">!</span> Year sources disagree — hover for details
             </p>
             <div class="table-wrapper">
               <table>

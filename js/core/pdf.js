@@ -1,3 +1,5 @@
+import { saveCards } from '../backend/cards.js';
+
 const HITSTER_URL = 'https://wilgoy23.github.io/MyHitster';
 
 async function sha256hex(str) {
@@ -31,12 +33,15 @@ export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hit
     const cardH = (pageH - 2 * marginY) / rows;
     const qrSize = Math.min(cardW, cardH) * 0.8;
 
-    const qrDataUrls = [];
+    const qrDataUrls  = [];
+    const cardRecords = [];
     for (let i = 0; i < playableTracks.length; i++) {
         onProgress(`Generating QR code ${i + 1} / ${playableTracks.length}…`);
         const track  = playableTracks[i];
         const hex    = await sha256hex(track.previewUrl);
-        const qrUrl  = buildQrUrl(track.previewUrl, hex.substring(0, 12));
+        const cardId = hex.substring(0, 12);
+        const qrUrl  = buildQrUrl(track.previewUrl, cardId);
+        cardRecords.push({ id: cardId, artist: track.artist, title: track.name, year: track.year });
         try {
             qrDataUrls.push(await QRCode.toDataURL(qrUrl, { width: 300, margin: 2, errorCorrectionLevel: 'L' }));
         } catch (e) {
@@ -44,6 +49,10 @@ export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hit
             qrDataUrls.push(null);
         }
     }
+
+    // Register the cards so the player can recover previews after the baked-in
+    // URLs expire. Non-blocking — PDF generation never waits on the backend.
+    saveCards(cardRecords).catch(e => console.warn('Card registry update failed:', e));
 
     onProgress('Rendering PDF…');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });

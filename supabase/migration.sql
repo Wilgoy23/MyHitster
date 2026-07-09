@@ -57,6 +57,32 @@ $$;
 
 grant execute on function get_deck_by_share_token(text) to anon, authenticated;
 
+-- Card registry: maps the card ID printed in each QR code (first 12 hex chars
+-- of the SHA-256 of the preview URL) to the track it represents. Lets the
+-- player recover a fresh preview when the original URL has expired, so
+-- printed decks keep working for years.
+--
+-- Rows are written by anyone generating a PDF (no account required) and are
+-- immutable: inserts use ON CONFLICT DO NOTHING and there is no update/delete
+-- policy, so existing cards can't be overwritten by other users.
+create table if not exists cards (
+    id         text primary key check (id ~ '^[0-9a-f]{12}$'),
+    artist     text not null check (char_length(artist) between 1 and 300),
+    title      text not null check (char_length(title)  between 1 and 300),
+    year       text not null check (char_length(year) <= 10),
+    created_at timestamptz not null default now()
+);
+
+alter table cards enable row level security;
+
+create policy "cards: public read"
+    on cards for select
+    using (true);
+
+create policy "cards: public insert"
+    on cards for insert
+    with check (true);
+
 -- Storage bucket: create manually in Supabase dashboard (Storage → New bucket → "pdfs", private)
 -- Then add this storage policy:
 

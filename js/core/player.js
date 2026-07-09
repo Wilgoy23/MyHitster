@@ -67,7 +67,13 @@ function handlePlayPause() {
         audio.pause();
         isPlaying = false;
     } else {
-        audio.play().catch(e => showError('Playback error: ' + e.message));
+        audio.play().catch(e => {
+            isPlaying = false;
+            updatePlayButton();
+            // A dead source also fires the audio 'error' event, which handles
+            // recovery — only surface other failures (e.g. autoplay policy).
+            if (e.name !== 'NotSupportedError') showError('Playback error: ' + e.message);
+        });
         isPlaying = true;
     }
     updatePlayButton();
@@ -79,10 +85,33 @@ audio.addEventListener('ended', () => {
     document.getElementById('status-message').textContent = 'Track ended — guess the song!';
 });
 
-audio.addEventListener('error', () => {
-    showError('Could not play preview — the link may have expired. Regenerate your cards.');
+// Card ID for which a preview recovery has already been attempted, so a dead
+// recovered URL doesn't trigger an endless lookup loop.
+let recoveryAttemptedFor = null;
+
+audio.addEventListener('error', async () => {
     isPlaying = false;
     updatePlayButton();
+
+    // The preview URL baked into a printed card can expire. When the card is
+    // registered in the backend (window.recoverCardPreview is exposed by
+    // js/backend/cards.js), look the track up and fetch a fresh preview.
+    if (trackId && trackId !== recoveryAttemptedFor && typeof window.recoverCardPreview === 'function') {
+        recoveryAttemptedFor = trackId;
+        document.getElementById('status-message').textContent =
+            'Preview link expired — looking up a fresh copy…';
+        try {
+            const freshUrl = await window.recoverCardPreview(trackId);
+            if (freshUrl && freshUrl !== audio.src) {
+                loadPreviewFromUrl(freshUrl);
+                return;
+            }
+        } catch (e) {
+            console.warn('Preview recovery failed:', e);
+        }
+    }
+
+    showError('Could not play preview — the link may have expired. Regenerate your cards.');
 });
 
 /* Toggles the play/pause icon. */

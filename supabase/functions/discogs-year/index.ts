@@ -60,11 +60,13 @@ Deno.serve(async (req) => {
     let earliest: number | null = null;
     for (const r of data.results ?? []) {
         const y = parseInt(r.year);
-        if (isNaN(y)) continue;
+        if (isNaN(y) || y < 1900) continue;
         // Master titles are formatted "Artist - Release Title" — require the
-        // artist to actually appear so a same-named track credited to someone
-        // else doesn't pull the year down.
-        if (artistNorm && !normalize(r.title ?? '').includes(artistNorm)) continue;
+        // artist segment to start with the requested artist (joint credits
+        // like "Queen And David Bowie" still match), so a master that merely
+        // mentions the artist somewhere in its title can't pull the year down.
+        const artistSeg = normalize((r.title ?? '').split(' - ')[0]);
+        if (artistNorm && artistSeg !== artistNorm && !artistSeg.startsWith(artistNorm + ' ')) continue;
         if (earliest === null || y < earliest) earliest = y;
     }
 

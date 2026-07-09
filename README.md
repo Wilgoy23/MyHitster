@@ -4,19 +4,18 @@ A browser-based music guessing game inspired by Hitster. Scan a QR code to hear 
 
 ## How it works
 
-1. **Generate a card deck** — import tracks from a Deezer playlist, search iTunes for an album or artist, or paste a track list manually. The card generator matches each song to a 30-second iTunes preview and produces a printable double-sided PDF.
+1. **Generate a card deck** — paste a public Deezer playlist URL. Previews come straight from Deezer (with an iTunes fallback), and release years are verified automatically against Deezer, MusicBrainz and Discogs. The generator produces a printable double-sided PDF.
 2. **Print and play** — cut out the cards. Each card has a QR code on the front and the artist, title, and year on the back.
 3. **Scan to play** — players scan a QR code with any device. The mystery track plays instantly in the browser with no login needed.
 
 ## Features
 
-- **Deezer playlist import** — paste any public Deezer playlist URL to import all tracks automatically
-- **iTunes album/artist search** — search directly for an album or artist to build a deck
-- **CSV/manual import** — upload an Exportify CSV or paste tracks as `Artist - Title`
-- **30-second previews** — audio via iTunes Search API, no account required
+- **Deezer playlist import** — paste any public Deezer playlist URL; previews and release years come straight from Deezer, so imports take seconds instead of minutes
+- **30-second previews** — audio via Deezer, with an iTunes Search API fallback; no account required
+- **Card recovery** — when Supabase is configured, each generated card is registered (ID → artist/title/year) so the player can fetch a fresh preview if the printed link ever expires
 - **QR code scanning** — uses device camera via jsQR
 - **Printable PDF** — double-sided layout with QR codes on the front and song info on the back; print with *Flip on short edge*
-- **MusicBrainz verification** — optional cross-check of release dates against MusicBrainz
+- **Automatic release-date verification** — every imported track is cross-checked against Deezer, MusicBrainz and Discogs in parallel; the earliest credible year wins (original release, not reissue) and tracks whose sources disagree are flagged for review
 - **Year range filter** — highlights tracks outside a chosen decade for review
 
 ## Requirements
@@ -45,12 +44,12 @@ A browser-based music guessing game inspired by Hitster. Scan a QR code to hear 
 │   │   ├── supabase.js         Supabase client singleton (null when unconfigured)
 │   │   ├── auth.js             Auth widget and state (optional)
 │   │   ├── decks.js            Deck save/load/share (optional)
+│   │   ├── cards.js            Card registry + preview recovery (optional)
 │   │   └── config.example.js   Template — copy to config.js and fill in credentials
 │   ├── core/
 │   │   ├── card-generator.js   Orchestrates deck building and UI
-│   │   ├── player.js           Audio playback via iTunes preview URLs
+│   │   ├── player.js           Audio playback of 30-second preview URLs
 │   │   ├── scanner.js          QR code scanning via jsQR
-│   │   ├── parser.js           CSV and manual track-list parsing
 │   │   └── pdf.js              PDF generation (returns blob + triggers download)
 │   └── ui/
 │       ├── theme.js            Dark/light theme toggle

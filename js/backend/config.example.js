@@ -1,5 +1,8 @@
-// Copy this file to js/config.js and fill in your Supabase credentials.
-// js/config.js is gitignored — your keys stay local.
+// Copy this file to js/backend/config.js and fill in your Supabase credentials.
+// The "anon public" key is a public, browser-side key by design — it ships to
+// every visitor regardless — so js/backend/config.js is committed to the repo.
+// Your data is protected by Supabase Row Level Security policies, not by hiding
+// this key. Do NOT put any secret (service_role key, API tokens) in this file.
 //
 // Setup steps:
 // 1. Create a free project at https://supabase.com

@@ -18,14 +18,23 @@ function sanitizeFilename(name) {
     return cleaned || 'Hitster_cards';
 }
 
+// Page dimensions in points, per paper size. The whole layout is derived from
+// pageW/pageH below, so adding a size is just adding an entry here.
+const PAGE_SIZES = {
+    letter: { w: 612,    h: 792    },  // 8.5 × 11 in
+    a4:     { w: 595.28, h: 841.89 },  // 210 × 297 mm
+};
+
 // Generates and downloads the PDF.
 // onProgress(message) is called with status strings during generation.
-export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hitster_cards') {
+// paper is 'letter' (default) or 'a4'.
+export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hitster_cards', paper = 'letter') {
     const playableTracks = tracks.filter(t => t.previewUrl);
     if (!playableTracks.length) return;
 
     const { jsPDF } = window.jspdf;
-    const pageW = 612, pageH = 792;
+    const size  = PAGE_SIZES[paper] || PAGE_SIZES.letter;
+    const pageW = size.w, pageH = size.h;
     const marginX = 50, marginY = 50;
     const rows = 5, cols = 3;
     const perPage = rows * cols;
@@ -55,7 +64,7 @@ export async function generatePDF(tracks, onProgress = () => {}, filename = 'Hit
     saveCards(cardRecords).catch(e => console.warn('Card registry update failed:', e));
 
     onProgress('Rendering PDF…');
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const doc = new jsPDF({ unit: 'pt', format: paper === 'a4' ? 'a4' : 'letter' });
 
     function drawGrid() {
         doc.setDrawColor(0);

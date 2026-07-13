@@ -39,7 +39,7 @@ async function importPlaylistUrl() {
             name:       cleanSongTitle(t.title),
             artist:     t.artist,
             year:       'Unknown',
-            previewUrl: t.previewUrl,
+            previewUrl: null,   // filled from iTunes during verification
             album:      t.albumTitle,
             albumId:    t.albumId,
             yearInfo:   {},
@@ -49,7 +49,6 @@ async function importPlaylistUrl() {
         showStatus(`Imported ${tracks.length} tracks from Deezer.`, 'success');
         renderTrackList();
 
-        await fillMissingPreviews();
         await verifyReleaseDates();
     } catch (e) {
         setLoading(false);
@@ -57,59 +56,57 @@ async function importPlaylistUrl() {
     }
 }
 
-// For tracks that Deezer returned without a preview, run a targeted iTunes
-// search to find a version that does have one.
-async function fillMissingPreviews() {
-    const missing = tracks.filter(t => !t.previewUrl);
-    if (!missing.length) return;
-
-    setLoading(true, `Finding previews for ${missing.length} track(s)…`);
-
-    let found = 0;
-    for (let j = 0; j < missing.length; j++) {
-        const t = missing[j];
-        updateStatus(`Searching preview ${j + 1}/${missing.length}: ${t.artist} – ${t.name}`);
-        try {
-            const result = await searchItunes(`${t.artist} ${t.name}`);
-            if (result?.previewUrl) { t.previewUrl = result.previewUrl; found++; }
-        } catch {
-            // leave previewUrl as null
-        }
-    }
-
-    setLoading(false);
-    if (found > 0) {
-        showStatus(`Found previews for ${found} additional track(s).`, 'success');
-        renderTrackList();
-    }
+function normalizeName(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-// ── Release-date verification ─────────────────────────────────────────────────
+// True when two artist strings plausibly refer to the same act (one contains
+// the other after normalization) — tolerant of "feat.", punctuation, casing.
+function artistsMatch(a, b) {
+    const x = normalizeName(a), y = normalizeName(b);
+    if (!x || !y) return false;
+    return x.includes(y) || y.includes(x);
+}
+
+// ── Preview + release-date resolution ─────────────────────────────────────────
 //
-// Cross-checks every track against the Deezer album date, MusicBrainz (earliest
-// recording release) and Discogs (master release year, when Supabase is
-// configured) and keeps the earliest credible year — the original release, not
-// a reissue or compilation date. Tracks whose sources disagree get a review
-// flag in the list. Runs automatically after import; the Step 3 button re-runs
-// it (e.g. for a loaded deck).
+// For every track this fetches, in parallel:
+//   • a durable iTunes preview URL — iTunes previews have no expiry, unlike the
+//     ~15-minute signed Deezer preview links, so they survive on printed cards.
+//     iTunes is the only preview source; a track with no confident (artist-
+//     matching) iTunes result stays unplayable and is left out of the deck.
+//   • the earliest credible release year, cross-checked against the Deezer album
+//     date, MusicBrainz and Discogs (when Supabase is configured) — the original
+//     release, not a reissue or compilation. Tracks whose sources disagree get a
+//     review flag.
+//
+// Runs automatically after import; the Step 3 button re-runs it (e.g. for a
+// loaded deck). The iTunes search and the three year sources have independent
+// rate-limit queues, so per track they run concurrently — one track costs the
+// slowest queue rather than the sum.
 
 async function verifyReleaseDates() {
     if (!tracks.length) { showStatus('No tracks to verify.', 'warning'); return; }
 
-    setLoading(true, 'Verifying release dates…');
+    setLoading(true, 'Finding previews and verifying release dates…');
     let updated = 0;
 
     for (let j = 0; j < tracks.length; j++) {
         const t = tracks[j];
-        updateStatus(`Verifying release dates… (${j + 1} / ${tracks.length}): ${t.artist} – ${t.name}`);
+        updateStatus(`Finding preview & release date (${j + 1} / ${tracks.length}): ${t.artist} – ${t.name}`);
 
-        // The three sources have independent rate-limit queues, so the
-        // lookups run in parallel — one track costs the slowest queue (~1.1 s).
-        const [dzYear, mbYear, dcYear] = await Promise.all([
+        const [itunes, dzYear, mbYear, dcYear] = await Promise.all([
+            searchItunes(`${t.artist} ${t.name}`).catch(() => null),
             fetchDeezerAlbumYear(t.albumId).catch(() => null),
             queryMusicBrainz(t.artist, t.name).catch(() => null),
             queryDiscogs(t.artist, t.name).catch(() => null),
         ]);
+
+        // Use the durable iTunes preview only when it's for the right artist —
+        // a wrong-song preview on a printed card is worse than none at all.
+        t.previewUrl = (itunes?.previewUrl && artistsMatch(itunes.artist, t.artist))
+            ? itunes.previewUrl
+            : null;
 
         t.yearInfo = {};
         if (dzYear) t.yearInfo.deezer      = dzYear;
@@ -178,7 +175,8 @@ async function handleGeneratePDF() {
     setLoading(true, 'Starting PDF generation…');
     try {
         const filename = document.getElementById('pdf-name-input').value.trim();
-        const blob = await generatePDF(tracks, msg => updateStatus(msg), filename || undefined);
+        const paper    = document.getElementById('paper-size')?.value === 'a4' ? 'a4' : 'letter';
+        const blob = await generatePDF(tracks, msg => updateStatus(msg), filename || undefined, paper);
         showStatus('PDF downloaded! Print double-sided with "Flip on short edge" for correct alignment.', 'success');
 
         if (isConfigured && getUser() && getCurrentDeckId() && blob) {

@@ -20,10 +20,11 @@ const MOCK_ITUNES_NO_PREVIEW = {
     }],
 };
 
+// Deezer's own preview field is intentionally omitted — the app ignores it and
+// sources previews from iTunes.
 const DEEZER_TRACK = {
     title:   'Under Pressure',
     artist:  { name: 'Queen' },
-    preview: 'https://cdns-preview.dzcdn.net/stream/x.mp3',
     album:   { id: 555, title: 'Hot Space' },
 };
 
@@ -96,7 +97,7 @@ test.describe('Card Generator', () => {
         await expect(page.locator('#status-message')).toContainText('not recognised');
     });
 
-    test('imports playlist with Deezer previews and years, no iTunes requests', async ({ page }) => {
+    test('fetches a durable iTunes preview per track during verification', async ({ page }) => {
         let itunesRequests = 0;
         await page.route('**/itunes.apple.com/**', route => {
             itunesRequests++;
@@ -108,14 +109,16 @@ test.describe('Card Generator', () => {
 
         await expect(page.locator('#track-tbody tr')).toHaveCount(1);
         await expect(page.locator('#track-tbody')).toContainText('Under Pressure');
-        await expect(page.locator('.year-input')).toHaveValue('1981');
+        // Year still comes from the Deezer/MusicBrainz/Discogs cross-check…
+        await expect(page.locator('.year-input')).toHaveValue('1981', { timeout: 15000 });
         await expect(page.locator('.badge-ok')).toBeVisible();
         await expect(page.locator('#generate-btn')).toBeVisible();
-        expect(itunesRequests).toBe(0);
+        // …while iTunes is searched once per track for the durable preview.
+        expect(itunesRequests).toBe(1);
     });
 
-    test('falls back to an iTunes preview when Deezer has none', async ({ page }) => {
-        await mockDeezer(page, { tracks: [{ ...DEEZER_TRACK, preview: null }] });
+    test('makes a track playable via its iTunes preview', async ({ page }) => {
+        await mockDeezer(page);
 
         await importPlaylist(page);
 
@@ -123,14 +126,28 @@ test.describe('Card Generator', () => {
         await expect(page.locator('#generate-btn')).toBeVisible();
     });
 
-    test('shows warning badge and hides generate button when no preview exists anywhere', async ({ page }) => {
+    test('shows warning badge and hides generate button when iTunes has no preview', async ({ page }) => {
         await page.route('**/itunes.apple.com/**', route => route.fulfill({ json: MOCK_ITUNES_NO_PREVIEW }));
-        await mockDeezer(page, { tracks: [{ ...DEEZER_TRACK, preview: null }] });
+        await mockDeezer(page);
 
         await importPlaylist(page);
 
         await expect(page.locator('.badge-warning')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('#generate-btn')).toBeHidden();
+    });
+
+    test('generates and downloads a PDF', async ({ page }) => {
+        await mockDeezer(page);
+        await importPlaylist(page);
+        // Let verification (and the durable-preview fetch) finish first.
+        await expect(page.locator('#status-message')).toContainText('Verification complete', { timeout: 20000 });
+
+        const download = page.waitForEvent('download', { timeout: 20000 });
+        await page.click('#generate-btn');
+        const dl = await download;
+
+        expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
+        await expect(page.locator('#status-message')).toContainText('PDF downloaded', { timeout: 20000 });
     });
 
     test('year filter highlights out-of-range tracks', async ({ page }) => {

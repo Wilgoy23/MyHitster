@@ -1,5 +1,7 @@
 // Fetches Deezer playlist tracks via JSONP to bypass browser CORS restrictions.
-// Returns [{artist, title}] for every track in the playlist.
+// Returns [{artist, title, albumId, albumTitle}] for every track. Deezer's own
+// preview links are deliberately ignored — they carry a ~15-minute signed token
+// that can't survive on a printed card, so previews come from iTunes instead.
 
 import { throttle } from './rateLimit.js';
 
@@ -28,7 +30,6 @@ export async function fetchDeezerPlaylistTracks(playlistId) {
                 trackList.push({
                     artist:     track.artist.name,
                     title:      track.title,
-                    previewUrl: track.preview || null,
                     albumId:    track.album?.id ?? null,
                     albumTitle: track.album?.title || '',
                 });

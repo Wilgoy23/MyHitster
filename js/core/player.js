@@ -41,12 +41,30 @@ function initPlayer() {
     }
 }
 
+// Preview audio may only be loaded from the CDNs we generate cards against —
+// iTunes (mzstatic / itunes.apple.com) and Deezer (dzcdn.net). A scanned QR or
+// crafted ?preview= param could otherwise point the player at any URL.
+const ALLOWED_PREVIEW_HOSTS = ['.mzstatic.com', '.itunes.apple.com', '.dzcdn.net'];
+
+function isAllowedPreviewUrl(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch { return false; }
+    if (parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.toLowerCase();
+    return ALLOWED_PREVIEW_HOSTS.some(suffix => host === suffix.slice(1) || host.endsWith(suffix));
+}
+
 /*
  Sets the audio source to a preview URL and readies the player.
  Called by initPlayer (URL param) and scanner.js (QR scan).
- @param {string} url  Direct iTunes preview URL
+ @param {string} url  Direct iTunes or Deezer preview URL
 */
 function loadPreviewFromUrl(url) {
+    if (!isAllowedPreviewUrl(url)) {
+        showError('This card points to an untrusted source and was not loaded.');
+        return;
+    }
+
     audio.pause();
     isPlaying = false;
     updatePlayButton();
@@ -66,17 +84,21 @@ function handlePlayPause() {
     if (isPlaying) {
         audio.pause();
         isPlaying = false;
+        updatePlayButton();
     } else {
-        audio.play().catch(e => {
+        // Only flip to "playing" once play() actually resolves — if autoplay is
+        // blocked or the source is dead, the button must not show "pause".
+        audio.play().then(() => {
+            isPlaying = true;
+            updatePlayButton();
+        }).catch(e => {
             isPlaying = false;
             updatePlayButton();
             // A dead source also fires the audio 'error' event, which handles
             // recovery — only surface other failures (e.g. autoplay policy).
             if (e.name !== 'NotSupportedError') showError('Playback error: ' + e.message);
         });
-        isPlaying = true;
     }
-    updatePlayButton();
 }
 
 audio.addEventListener('ended', () => {
@@ -126,6 +148,10 @@ function updatePlayButton() {
 /* Displays an error in the status area. */
 function showError(message) {
     console.error('Error:', message);
-    document.getElementById('status-message').innerHTML =
-        `<div class="error">${message}</div>`;
+    const status = document.getElementById('status-message');
+    status.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'error';
+    box.textContent = message;
+    status.appendChild(box);
 }

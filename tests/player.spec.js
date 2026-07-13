@@ -21,7 +21,7 @@ test.describe('Player page', () => {
             contentType: 'audio/wav',
             body: silentWav(),
         }));
-        const encoded = encodePreviewUrl('https://example.com/preview.mp3');
+        const encoded = encodePreviewUrl('https://audio-ssl.mzstatic.com/preview.mp3');
         await page.goto(`/?preview=${encoded}&id=abc123`);
 
         await expect(page.locator('#status-message')).toHaveText('Tap play to hear the mystery track');
@@ -52,7 +52,7 @@ test.describe('Player page', () => {
             json: { results: [{
                 trackName: 'Bohemian Rhapsody', artistName: 'Queen',
                 releaseDate: '1975-10-31T07:00:00Z',
-                previewUrl: 'https://example.com/fresh.mp3',
+                previewUrl: 'https://audio-ssl.mzstatic.com/fresh.mp3',
                 collectionName: 'A Night at the Opera',
             }] },
         }));
@@ -62,7 +62,7 @@ test.describe('Player page', () => {
             body: silentWav(),
         }));
 
-        const encoded = encodePreviewUrl('https://example.com/dead-preview.mp3');
+        const encoded = encodePreviewUrl('https://audio-ssl.mzstatic.com/dead-preview.mp3');
         await page.goto(`/?preview=${encoded}&id=abc123def456`);
 
         await expect
